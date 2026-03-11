@@ -504,6 +504,10 @@ transform:translateX(-50%) translateY(var(--meow-end-y, 0)) translateX(var(--meo
 
 </div>
 
+<div id="viewerCounter" style="position:fixed; bottom:20px; right:20px; background:rgba(0,0,0,0.7); padding:10px 15px; border-radius:8px; font-size:14px; z-index:5000;">
+<span id="viewerCounterDisplay">1/0</span>
+</div>
+
 <button id="nextBtn" class="nav-btn right">▶</button>
 
 </div>
@@ -675,12 +679,13 @@ slideshowTimer = setInterval(playStep, interval)
 }
 })
 
-/* scroll tracking for slideshow - with Firefox autoscroll support */
+/* scroll tracking for slideshow and viewer - proportional to scroll position */
 
 let cumulativeScroll = 0
 const scrollThreshold = 50 // pixels needed to change slide
 let lastMiddleClick = 0
 let autoscrollActive = false
+let lastImageIndex = -1
 
 // Detect middle mouse down for Firefox autoscroll
 document.addEventListener('mousedown', e => {
@@ -689,53 +694,7 @@ lastMiddleClick = Date.now()
 }
 })
 
-// Detect scroll events (both from wheel and Firefox autoscroll)
-document.addEventListener('scroll', () => {
-const slideshow = document.getElementById('slideshow')
-if(slideshow.style.display !== 'block') return
-
-const now = Date.now()
-
-// Check if scroll event occurred within 500ms of middle click (autoscroll detection)
-if(!autoscrollActive && now - lastMiddleClick < 500){
-autoscrollActive = true
-}
-
-if(autoscrollActive){
-// In autoscroll mode, we can't directly get deltaY, so we use window.scrollY
-// Since slideshow is fixed positioned, we need to track scroll position changes
-// We'll use a small timeout to batch scroll events and detect direction
-if(window.scrollY !== undefined){
-// Scroll was detected during autoscroll
-cumulativeScroll += (window.scrollY > 25) ? 100 : -100
-}
-}
-}, {passive: true})
-
-document.addEventListener('mouseup', e => {
-if(e.button === 1){
-autoscrollActive = false
-cumulativeScroll = 0
-}
-})
-
-// Check if threshold met and change slides
-setInterval(() => {
-const slideshow = document.getElementById('slideshow')
-if(slideshow.style.display !== 'block') return
-
-if(Math.abs(cumulativeScroll) >= scrollThreshold){
-if(cumulativeScroll > 0){
-showSlide(slideIndex + 1)
-cumulativeScroll = 0
-} else if(cumulativeScroll < 0){
-showSlide(slideIndex - 1)
-cumulativeScroll = 0
-}
-}
-}, 100)
-
-// Regular wheel scroll (works on any browser)
+// Regular wheel scroll - SLIDESHOW ONLY
 document.addEventListener('wheel', e => {
 const slideshow = document.getElementById('slideshow')
 if(slideshow.style.display !== 'block') return
@@ -753,6 +712,41 @@ cumulativeScroll = 0
 }
 }
 }, {passive: false})
+
+// Track scroll position for viewer mode - proportional to document scroll
+document.addEventListener('scroll', () => {
+const viewer = document.getElementById('viewer')
+if(viewer.style.display !== 'flex' || currentImages.length === 0) return
+
+const scrollY = window.scrollY || document.documentElement.scrollTop
+const documentHeight = document.documentElement.scrollHeight
+const viewportHeight = window.innerHeight
+
+// Total scrollable distance
+const totalScroll = documentHeight - viewportHeight
+
+// Calculate which image should be shown based on scroll percentage
+let imageIndex = 0
+if(totalScroll > 0){
+const scrollPercentage = scrollY / totalScroll
+imageIndex = Math.min(
+Math.floor(scrollPercentage * currentImages.length),
+currentImages.length - 1
+)
+}
+
+// Only update if we've moved to a different image
+if(imageIndex !== lastImageIndex){
+lastImageIndex = imageIndex
+showImage(imageIndex)
+}
+}, {passive: true})
+
+document.addEventListener('mouseup', e => {
+if(e.button === 1){
+autoscrollActive = false
+}
+})
 
 /* keyboard controls in slideshow */
 
@@ -788,6 +782,12 @@ img.onclick=()=>{
 currentIndex=currentImages.indexOf(src)
 viewer.style.display='flex'
 full.src=src
+
+// Update viewer counter
+const viewerCounterDisplay = document.getElementById('viewerCounterDisplay')
+if(viewerCounterDisplay){
+viewerCounterDisplay.textContent = (currentIndex+1) + '/' + currentImages.length
+}
 }
 
 const g=document.createElement('button')
@@ -881,6 +881,12 @@ if(index>=currentImages.length) index=0
 currentIndex=index
 full.src=currentImages[currentIndex]
 viewer.style.display='flex'
+
+// Update viewer counter
+const viewerCounterDisplay = document.getElementById('viewerCounterDisplay')
+if(viewerCounterDisplay){
+viewerCounterDisplay.textContent = (index+1) + '/' + currentImages.length
+}
 }
 
 function nextImage(){ showImage(currentIndex+1) }
