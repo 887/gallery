@@ -18,7 +18,11 @@ margin:0;
 header{
 padding:10px;
 text-align:center;
-position:relative;
+position:sticky;
+top:0;
+z-index:1000;
+background:#111;
+border-bottom:1px solid rgba(255,255,255,0.1);
 }
 
 button.folder-btn{
@@ -228,7 +232,7 @@ display:flex;
 align-items:center;
 justify-content:center;
 opacity:0;
-transition:opacity 1.5s;
+transition:opacity var(--fade-duration, 1.5s);
 z-index:5001;
 pointer-events:none;
 }
@@ -268,6 +272,13 @@ z-index:5002;
 background:rgba(0,0,0,0.7);
 padding:10px 20px;
 border-radius:8px;
+transition:opacity 0.3s ease;
+opacity:1;
+}
+
+#slideshowControls.hidden{
+opacity:0;
+pointer-events:none;
 }
 
 #slideshowControls button{
@@ -537,11 +548,11 @@ transform:translateX(-50%) translateY(var(--meow-end-y, 0)) translateX(var(--meo
 <button onclick="togglePlay()" title="Play/Pause">⏯</button>
 <button onclick="forwardPlay()" title="Play Forward">⏩</button>
 <button onclick="showSlide(slideIndex+1)" title="Next">▶</button>
-<button onclick="document.getElementById('slideshow').style.display='none'" title="Close">✕</button>
+<button onclick="closeSlideshowAndReset()" title="Close">✕</button>
 
 <div id="slideshowSpeedControl">
 <label style="font-size:12px;">img/s:</label>
-<input class="num-spin" type="number" id="speedNum" min="0.1" max="20" step="0.1" value="1">
+<input class="num-spin" type="number" id="speedNum" min="0.1" max="20" step="0.1" value="0.3">
 </div>
 
 <div id="slideshowMode">
@@ -550,6 +561,12 @@ transform:translateX(-50%) translateY(var(--meow-end-y, 0)) translateX(var(--meo
 
 <div id="slideCounter" style="margin-left:10px; padding-left:10px; border-left:1px solid rgba(255,255,255,0.3); font-size:12px; min-width:50px;">
 <span id="counterDisplay">1/0</span>
+</div>
+
+<div id="fadeControl" style="display:flex; gap:5px; align-items:center; margin-left:10px; padding-left:10px; border-left:1px solid rgba(255,255,255,0.3);">
+<label style="font-size:12px;">fade:</label>
+<input class="num-spin" type="number" id="fadeNum" min="0.1" max="5" step="0.1" value="2" style="width:50px;">
+<span style="font-size:11px;">s</span>
 </div>
 
 </div>
@@ -569,7 +586,7 @@ let slideIndex=0
 let slideshowTimer=null
 let slideshowDirection=1
 let playing=false
-let slideshowSpeed=1
+let slideshowSpeed=0.3
 
 let currentImages=[]
 let currentIndex=0
@@ -582,10 +599,26 @@ function startSlideshow(){
 if(currentImages.length===0) return
 
 document.getElementById('slideshow').style.display='block'
+document.querySelector('header').style.display='none'
 
 slideIndex=0
 showSlide(0)
 
+// Auto-start playing
+if(!playing){
+togglePlay()
+}
+
+// Reset controls hide timer
+resetControlsHideTimer()
+
+}
+
+function closeSlideshowAndReset(){
+document.getElementById('slideshow').style.display='none'
+document.querySelector('header').style.display='block'
+clearTimeout(controlsHideTimer)
+slideshowControls.classList.remove('hidden')
 }
 
 /* fade logic */
@@ -671,13 +704,46 @@ updateModeDisplay()
 /* speed control */
 
 document.getElementById('speedNum').addEventListener('input', e=>{
-slideshowSpeed = parseFloat(e.target.value)||1
+slideshowSpeed = parseFloat(e.target.value)||0.3
 if(playing){
 clearInterval(slideshowTimer)
 const interval = Math.round(1000 / slideshowSpeed)
 slideshowTimer = setInterval(playStep, interval)
 }
+localStorage.setItem('slideshowSpeed', slideshowSpeed)
 })
+
+/* fade duration control */
+
+let fadeDuration = 2.0
+document.getElementById('fadeNum').addEventListener('input', e=>{
+fadeDuration = parseFloat(e.target.value)||2.0
+document.documentElement.style.setProperty('--fade-duration', fadeDuration + 's')
+localStorage.setItem('slideshowFadeDuration', fadeDuration)
+})
+
+/* slideshow controls auto-hide after 2 seconds */
+
+let controlsHideTimer = null
+const slideshowControls = document.getElementById('slideshowControls')
+
+function resetControlsHideTimer(){
+clearTimeout(controlsHideTimer)
+slideshowControls.classList.remove('hidden')
+controlsHideTimer = setTimeout(() => {
+const slideshow = document.getElementById('slideshow')
+if(slideshow.style.display === 'block'){
+slideshowControls.classList.add('hidden')
+}
+}, 2000)
+}
+
+document.getElementById('slideshow').addEventListener('mousemove', resetControlsHideTimer)
+document.getElementById('slideshow').addEventListener('wheel', resetControlsHideTimer)
+
+/* scroll position tracking for gallery to fullscreen */
+
+let galleryScrollPosition = 0
 
 /* scroll tracking for slideshow and viewer - proportional to scroll position */
 
@@ -789,8 +855,8 @@ cumulativeScroll = 0
 document.addEventListener('keydown', e => {
 const slideshow = document.getElementById('slideshow')
 
-// Space to start slideshow (if not already open)
-if(e.key === ' ' && slideshow.style.display !== 'block'){
+// Space to start slideshow (if not already open and not in viewer mode)
+if(e.key === ' ' && slideshow.style.display !== 'block' && viewer.style.display !== 'flex'){
 e.preventDefault()
 startSlideshow()
 return
@@ -800,8 +866,11 @@ if(slideshow.style.display !== 'block') return
 
 if(e.key === 'ArrowRight') showSlide(slideIndex + 1)
 if(e.key === 'ArrowLeft') showSlide(slideIndex - 1)
-if(e.key === 'Escape') slideshow.style.display = 'none'
-if(e.key === ' ') e.preventDefault()
+if(e.key === 'Escape') closeSlideshowAndReset()
+if(e.key === ' '){
+e.preventDefault()
+togglePlay()
+}
 })
 
 /* gallery */
@@ -816,7 +885,12 @@ img.src=src
 
 img.onclick=()=>{
 currentIndex=currentImages.indexOf(src)
+
+// Save current scroll position
+galleryScrollPosition = window.scrollY || document.documentElement.scrollTop
+
 viewer.style.display='flex'
+document.querySelector('header').style.display='none'
 full.src=src
 
 // Update viewer counter
@@ -917,6 +991,7 @@ if(index>=currentImages.length) index=0
 currentIndex=index
 full.src=currentImages[currentIndex]
 viewer.style.display='flex'
+document.querySelector('header').style.display='none'
 
 // Update viewer counter
 const viewerCounterDisplay = document.getElementById('viewerCounterDisplay')
@@ -935,12 +1010,20 @@ document.addEventListener('keydown', e=>{
 if(viewer.style.display==='flex'){
 if(e.key==='ArrowRight' || e.code==='Space') nextImage()
 if(e.key==='ArrowLeft') prevImage()
-if(e.key==='Escape') viewer.style.display='none'
+if(e.key==='Escape'){
+viewer.style.display='none'
+document.querySelector('header').style.display='block'
+window.scrollTo(0, galleryScrollPosition)
+}
 }
 })
 
 viewer.onclick=e=>{
-if(e.target===viewer) viewer.style.display='none'
+if(e.target===viewer){
+viewer.style.display='none'
+document.querySelector('header').style.display='block'
+window.scrollTo(0, galleryScrollPosition)
+}
 }
 
 /* viewer G/B buttons */
@@ -954,9 +1037,14 @@ body:JSON.stringify({image:src.split('/').pop(), target})
 }).then(r=>{
 if(r.ok){
 currentImages.splice(currentIndex, 1)
-if(currentImages.length===0) viewer.style.display='none'
+if(currentImages.length===0){
+viewer.style.display='none'
+document.querySelector('header').style.display='block'
+window.scrollTo(0, galleryScrollPosition)
+}
 else if(currentIndex>=currentImages.length) currentIndex--
 if(currentImages.length>0) showImage(currentIndex)
+renderImages(currentImages)
 loadCounts()
 }
 })
@@ -1167,6 +1255,20 @@ saveMeowSettings()
 loadCounts()
 loadMeowSettings()
 startMeowSpawning()
+
+// Load slideshow settings from localStorage
+const savedSpeed = localStorage.getItem('slideshowSpeed')
+const savedFade = localStorage.getItem('slideshowFadeDuration')
+if(savedSpeed){
+slideshowSpeed = parseFloat(savedSpeed)
+document.getElementById('speedNum').value = slideshowSpeed
+}
+if(savedFade){
+fadeDuration = parseFloat(savedFade)
+document.getElementById('fadeNum').value = fadeDuration
+document.documentElement.style.setProperty('--fade-duration', fadeDuration + 's')
+}
+
 loadImages('all')
 
 </script>
