@@ -16,7 +16,7 @@ function countImages(folder) {
     return fs.readdirSync(folder).filter(f=>{
         const full = path.join(folder, f);
         const ext = path.extname(f).toLowerCase();
-        return fs.statSync(full).isFile() && ['.jpg','.jpeg','.png','.gif'].includes(ext);
+        return fs.statSync(full).isFile() && ['.jpg','.jpeg','.png','.gif','.webp','.bmp','.svg','.tiff','.tif','.ico','.jxl','.avif'].includes(ext);
     }).length;
 }
 
@@ -38,9 +38,21 @@ const server = http.createServer((req, res) => {
         fs.readFile(filePath, (err, data) => {
             if (err) return res.writeHead(404).end('Not found');
             const ext = path.extname(filePath).toLowerCase();
-            const mime = ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' :
-                         ext === '.png' ? 'image/png' :
-                         ext === '.gif' ? 'image/gif' : 'application/octet-stream';
+            const mimeTypes = {
+                '.jpg': 'image/jpeg',
+                '.jpeg': 'image/jpeg',
+                '.png': 'image/png',
+                '.gif': 'image/gif',
+                '.webp': 'image/webp',
+                '.bmp': 'image/bmp',
+                '.svg': 'image/svg+xml',
+                '.tiff': 'image/tiff',
+                '.tif': 'image/tiff',
+                '.ico': 'image/x-icon',
+                '.jxl': 'image/jxl',
+                '.avif': 'image/avif'
+            };
+            const mime = mimeTypes[ext] || 'application/octet-stream';
             res.writeHead(200, { 'Content-Type': mime });
             res.end(data);
         });
@@ -58,7 +70,7 @@ const server = http.createServer((req, res) => {
             let images = files.filter(f => {
                 const full = path.join(folder, f);
                 const ext = path.extname(f).toLowerCase();
-                return fs.statSync(full).isFile() && ['.jpg','.jpeg','.png','.gif'].includes(ext);
+                return fs.statSync(full).isFile() && ['.jpg','.jpeg','.png','.gif','.webp','.bmp','.svg','.tiff','.tif','.ico','.jxl','.avif'].includes(ext);
             });
 
             images.sort((a,b)=>{
