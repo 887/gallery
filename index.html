@@ -544,6 +544,10 @@ transform:translateX(-50%) translateY(var(--meow-end-y, 0)) translateX(var(--meo
 <span id="modeDisplay">⏸</span>
 </div>
 
+<div id="slideCounter" style="margin-left:10px; padding-left:10px; border-left:1px solid rgba(255,255,255,0.3); font-size:12px; min-width:50px;">
+<span id="counterDisplay">1/0</span>
+</div>
+
 </div>
 <div id="slideProgress" style="width:0%"></div>
 
@@ -605,6 +609,12 @@ next.querySelector('img').src=currentImages[i]
 active.classList.remove('active')
 next.classList.add('active')
 
+// Update image counter
+const counterDisplay = document.getElementById('counterDisplay')
+if(counterDisplay){
+counterDisplay.textContent = (i+1) + '/' + currentImages.length
+}
+
 }
 
 /* autoplay */
@@ -665,31 +675,100 @@ slideshowTimer = setInterval(playStep, interval)
 }
 })
 
-/* middle-click and scrolling - allow document scrolling in slideshow */
+/* scroll tracking for slideshow - with Firefox autoscroll support */
 
+let cumulativeScroll = 0
+const scrollThreshold = 50 // pixels needed to change slide
+let lastMiddleClick = 0
+let autoscrollActive = false
+
+// Detect middle mouse down for Firefox autoscroll
 document.addEventListener('mousedown', e => {
 if(e.button === 1){
-// Middle button - don't prevent, let it scroll
-// But we'll track it for potential slide navigation if user prefers
+lastMiddleClick = Date.now()
 }
 })
 
-/* wheel scroll - allow scrolling but also navigate slides */
+// Detect scroll events (both from wheel and Firefox autoscroll)
+document.addEventListener('scroll', () => {
+const slideshow = document.getElementById('slideshow')
+if(slideshow.style.display !== 'block') return
 
+const now = Date.now()
+
+// Check if scroll event occurred within 500ms of middle click (autoscroll detection)
+if(!autoscrollActive && now - lastMiddleClick < 500){
+autoscrollActive = true
+}
+
+if(autoscrollActive){
+// In autoscroll mode, we can't directly get deltaY, so we use window.scrollY
+// Since slideshow is fixed positioned, we need to track scroll position changes
+// We'll use a small timeout to batch scroll events and detect direction
+if(window.scrollY !== undefined){
+// Scroll was detected during autoscroll
+cumulativeScroll += (window.scrollY > 25) ? 100 : -100
+}
+}
+}, {passive: true})
+
+document.addEventListener('mouseup', e => {
+if(e.button === 1){
+autoscrollActive = false
+cumulativeScroll = 0
+}
+})
+
+// Check if threshold met and change slides
+setInterval(() => {
+const slideshow = document.getElementById('slideshow')
+if(slideshow.style.display !== 'block') return
+
+if(Math.abs(cumulativeScroll) >= scrollThreshold){
+if(cumulativeScroll > 0){
+showSlide(slideIndex + 1)
+cumulativeScroll = 0
+} else if(cumulativeScroll < 0){
+showSlide(slideIndex - 1)
+cumulativeScroll = 0
+}
+}
+}, 100)
+
+// Regular wheel scroll (works on any browser)
 document.addEventListener('wheel', e => {
 const slideshow = document.getElementById('slideshow')
 if(slideshow.style.display !== 'block') return
 
-// Allow natural scrolling of the page
-}, {passive: true})
+e.preventDefault()
+cumulativeScroll += e.deltaY
+
+if(Math.abs(cumulativeScroll) >= scrollThreshold){
+if(cumulativeScroll > 0){
+showSlide(slideIndex + 1)
+cumulativeScroll = 0
+} else if(cumulativeScroll < 0){
+showSlide(slideIndex - 1)
+cumulativeScroll = 0
+}
+}
+}, {passive: false})
 
 /* keyboard controls in slideshow */
 
 document.addEventListener('keydown', e => {
 const slideshow = document.getElementById('slideshow')
+
+// Space to start slideshow (if not already open)
+if(e.key === ' ' && slideshow.style.display !== 'block'){
+e.preventDefault()
+startSlideshow()
+return
+}
+
 if(slideshow.style.display !== 'block') return
 
-if(e.key === 'ArrowRight' || e.code === 'Space') showSlide(slideIndex + 1)
+if(e.key === 'ArrowRight') showSlide(slideIndex + 1)
 if(e.key === 'ArrowLeft') showSlide(slideIndex - 1)
 if(e.key === 'Escape') slideshow.style.display = 'none'
 if(e.key === ' ') e.preventDefault()
