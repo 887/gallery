@@ -884,16 +884,19 @@ const img=document.createElement('img')
 img.src=src
 
 img.onclick=()=>{
-currentIndex=currentImages.indexOf(src)
-
-// Save current scroll position
+// Save current scroll position FIRST
 galleryScrollPosition = window.scrollY || document.documentElement.scrollTop
 
+// Find index and set current index
+currentIndex=currentImages.indexOf(src)
+lastImageIndex = currentIndex  // Prevent scroll events from overriding
+
+// Show viewer and image
 viewer.style.display='flex'
 document.querySelector('header').style.display='none'
 full.src=src
 
-// Update viewer counter
+// Update viewer counter with correct index
 const viewerCounterDisplay = document.getElementById('viewerCounterDisplay')
 if(viewerCounterDisplay){
 viewerCounterDisplay.textContent = (currentIndex+1) + '/' + currentImages.length
