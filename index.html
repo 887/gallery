@@ -686,6 +686,7 @@ const scrollThreshold = 50 // pixels needed to change slide
 let lastMiddleClick = 0
 let autoscrollActive = false
 let lastImageIndex = -1
+let lastSlideshowIndex = -1
 
 // Detect middle mouse down for Firefox autoscroll
 document.addEventListener('mousedown', e => {
@@ -713,9 +714,43 @@ cumulativeScroll = 0
 }
 }, {passive: false})
 
-// Track scroll position for viewer mode - proportional to document scroll
+// Track scroll position for both viewer and slideshow modes
 document.addEventListener('scroll', () => {
+const slideshow = document.getElementById('slideshow')
 const viewer = document.getElementById('viewer')
+const now = Date.now()
+
+// Slideshow mode - use proportional scroll mapping like viewer
+if(slideshow.style.display === 'block'){
+if(currentImages.length === 0) return
+
+const scrollY = window.scrollY || document.documentElement.scrollTop
+const documentHeight = document.documentElement.scrollHeight
+const viewportHeight = window.innerHeight
+
+// Total scrollable distance
+const totalScroll = documentHeight - viewportHeight
+
+// Calculate which slide should be shown based on scroll percentage
+let imageIndex = 0
+if(totalScroll > 0){
+const scrollPercentage = scrollY / totalScroll
+imageIndex = Math.min(
+Math.floor(scrollPercentage * currentImages.length),
+currentImages.length - 1
+)
+}
+
+// Only update if we've moved to a different slide
+if(imageIndex !== lastSlideshowIndex){
+lastSlideshowIndex = imageIndex
+slideIndex = imageIndex
+showSlide(imageIndex)
+}
+return
+}
+
+// Viewer mode - use proportional scroll mapping
 if(viewer.style.display !== 'flex' || currentImages.length === 0) return
 
 const scrollY = window.scrollY || document.documentElement.scrollTop
@@ -745,6 +780,7 @@ showImage(imageIndex)
 document.addEventListener('mouseup', e => {
 if(e.button === 1){
 autoscrollActive = false
+cumulativeScroll = 0
 }
 })
 
