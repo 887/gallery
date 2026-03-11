@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Image Gallery</title>
+
+<style>
+
+body{
+background:#111;
+color:white;
+font-family:sans-serif;
+margin:0;
+}
+
+/* header */
+
+header{
+padding:10px;
+text-align:center;
+position:relative;
+}
+
+button.folder-btn{
+margin:0 5px;
+padding:5px 10px;
+cursor:pointer;
+border:none;
+background:rgba(255,255,255,0.2);
+color:white;
+border-radius:6px;
+}
+
+button.folder-btn:hover{
+background:rgba(255,255,255,0.4);
+}
+
+/* slideshow button */
+
+#slideshowBtn{
+position:absolute;
+right:10px;
+top:10px;
+}
+
+/* meow control */
+
+#meowControl{
+position:fixed;
+top:10px;
+left:10px;
+z-index:9999;
+background:rgba(0,0,0,.6);
+padding:6px 10px;
+border-radius:6px;
+display:flex;
+gap:5px;
+align-items:center;
+}
+
+#meowSettings{
+position:fixed;
+top:50px;
+left:10px;
+z-index:9999;
+background:rgba(0,0,0,.8);
+padding:10px;
+border-radius:6px;
+border:1px solid rgba(255,255,255,0.3);
+display:none;
+min-width:250px;
+max-height:400px;
+overflow-y:auto;
+}
+
+#meowSettings.open{
+display:block;
+}
+
+.meow-setting-row{
+margin:8px 0;
+display:flex;
+flex-direction:column;
+gap:4px;
+}
+
+.meow-setting-row label{
+font-size:12px;
+opacity:0.8;
+}
+
+.meow-setting-row input[type="range"]{
+width:100%;
+cursor:pointer;
+}
+
+.meow-setting-row input[type="text"]{
+background:rgba(255,255,255,0.1);
+border:1px solid rgba(255,255,255,0.3);
+color:white;
+padding:4px;
+border-radius:3px;
+font-size:11px;
+font-family:monospace;
+}
+
+#meowCount{
+font-weight:bold;
+}
+
+#meowSettingsBtn{
+background:none;
+border:none;
+color:white;
+cursor:pointer;
+font-size:16px;
+padding:0;
+opacity:0.7;
+}
+
+#meowSettingsBtn:hover{
+opacity:1;
+}
+
+/* gallery */
+
+.gallery{
+display:grid;
+grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+gap:10px;
+padding:10px;
+}
+
+.image-container{
+position:relative;
+}
+
+.gallery img{
+width:100%;
+height:200px;
+object-fit:cover;
+cursor:pointer;
+border-radius:6px;
+display:block;
+}
+
+/* overlay buttons */
+
+.overlay-btn{
+position:absolute;
+bottom:5px;
+padding:2px 5px;
+font-size:12px;
+border:none;
+background:rgba(255,255,255,0.3);
+color:black;
+border-radius:3px;
+cursor:pointer;
+opacity:0.8;
+}
+
+.overlay-good{right:5px;}
+.overlay-bad{left:5px;}
+
+.overlay-btn:hover{opacity:1;}
+
+/* viewer */
+
+.viewer{
+position:fixed;
+inset:0;
+background:rgba(0,0,0,.95);
+display:none;
+align-items:center;
+justify-content:center;
+}
+
+.viewer-image{
+position:relative;
+display:inline-block;
+}
+
+.viewer-image img{
+max-width:95vw;
+max-height:95vh;
+display:block;
+}
+
+/* navigation */
+
+.nav-btn{
+position:absolute;
+top:50%;
+transform:translateY(-50%);
+font-size:40px;
+background:rgba(0,0,0,0.4);
+border:none;
+color:white;
+padding:10px 15px;
+cursor:pointer;
+border-radius:5px;
+}
+
+.left{left:20px;}
+.right{right:20px;}
+
+/* slideshow */
+
+#slideshow{
+position:fixed;
+left:0;
+right:0;
+top:0;
+bottom:0;
+background:black;
+display:none;
+z-index:5000;
+overflow:hidden;
+}
+
+.slide{
+position:fixed;
+left:0;
+right:0;
+top:0;
+bottom:0;
+display:flex;
+align-items:center;
+justify-content:center;
+opacity:0;
+transition:opacity 1.5s;
+z-index:5001;
+pointer-events:none;
+}
+
+.slide.active{
+opacity:1;
+pointer-events:auto;
+}
+
+.slide-image{
+position:relative;
+display:inline-block;
+}
+
+.slide img{
+max-width:95vw;
+max-height:95vh;
+display:block;
+}
+
+/* slideshow slide buttons - match fullscreen positions */
+
+.slide .overlay-bad{ left:5px; bottom:5px; top:auto; }
+.slide .overlay-good{ right:5px; bottom:5px; top:auto; }
+
+/* slideshow controls */
+
+#slideshowControls{
+position:fixed;
+bottom:20px;
+left:50%;
+transform:translateX(-50%);
+display:flex;
+gap:10px;
+align-items:center;
+z-index:5002;
+background:rgba(0,0,0,0.7);
+padding:10px 20px;
+border-radius:8px;
+}
+
+#slideshowControls button{
+font-size:14px;
+padding:4px 8px;
+border:none;
+background:rgba(255,255,255,0.3);
+color:white;
+border-radius:3px;
+cursor:pointer;
+opacity:0.8;
+}
+
+#slideshowControls button:hover{
+opacity:1;
+}
+
+#slideshowSpeedControl{
+display:flex;
+gap:8px;
+align-items:center;
+margin-left:10px;
+padding-left:10px;
+border-left:1px solid rgba(255,255,255,0.3);
+}
+
+#speedSlider{
+width:80px;
+cursor:pointer;
+}
+
+#speedValue{
+min-width:50px;
+font-size:12px;
+text-align:right;
+}
+
+#slideshowMode{
+margin-left:10px;
+padding-left:10px;
+border-left:1px solid rgba(255,255,255,0.3);
+font-size:12px;
+min-width:60px;
+}
+
+/* slideshow progress bar at bottom */
+
+#slideProgress{
+position:absolute;
+left:0;
+bottom:0;
+height:4px;
+background:rgba(255,255,255,0.6);
+transition:width 0.3s ease;
+z-index:10;
+}
+
+/* scrollbar track on right side */
+
+#scrollbarTrack{
+position:absolute;
+right:0;
+top:0;
+width:12px;
+height:100%;
+background:rgba(255,255,255,0.1);
+z-index:9;
+pointer-events:none;
+}
+
+#scrollbarThumb{
+position:absolute;
+right:0;
+width:12px;
+background:rgba(255,255,255,0.4);
+border-radius:6px;
+z-index:10;
+transition:opacity 0.2s;
+opacity:0.3;
+}
+
+#slideshow:hover #scrollbarThumb{
+opacity:0.7;
+}
+
+/* number inputs */
+
+.num-spin{
+background:rgba(255,255,255,0.1);
+border:1px solid rgba(255,255,255,0.3);
+color:white;
+border-radius:3px;
+padding:2px 4px;
+width:65px;
+font-size:12px;
+}
+
+.meow-setting-row select{
+background:rgba(0,0,0,0.6);
+border:1px solid rgba(255,255,255,0.3);
+color:white;
+border-radius:3px;
+padding:2px 4px;
+font-size:12px;
+width:100%;
+cursor:pointer;
+}
+
+/* meow text */
+
+.meow{
+position:fixed;
+left:50%;
+transform:translateX(-50%);
+opacity:0;
+animation:meowSlideIn var(--meow-slide, 1s) ease-out forwards, meowFade var(--meow-duration, 3s) linear var(--meow-slide, 1s) forwards;
+pointer-events:none;
+z-index:10000;
+font-size:40px;
+font-weight:bold;
+color:white;
+text-shadow:0 0 10px black;
+}
+
+@keyframes meowSlideIn{
+0%{
+opacity:0;
+transform:translateX(-50%) translateY(var(--meow-start-y, 0)) translateX(var(--meow-start-x, 0)) rotate(var(--meow-tilt, 0deg));
+}
+100%{
+opacity:1;
+transform:translateX(-50%) translateY(var(--meow-visible-y, 0)) translateX(var(--meow-visible-x, 0)) rotate(var(--meow-tilt, 0deg));
+}
+}
+
+@keyframes meowFade{
+0%{
+opacity:1;
+transform:translateX(-50%) translateY(var(--meow-visible-y, 0)) translateX(var(--meow-visible-x, 0)) rotate(var(--meow-tilt, 0deg));
+}
+100%{
+opacity:0;
+transform:translateX(-50%) translateY(var(--meow-end-y, 0)) translateX(var(--meow-end-x, 0)) rotate(var(--meow-tilt, 0deg));
+}
+}
+
+</style>
+</head>
+
+<body>
+
+<div id="meowControl">
+<label><input type="checkbox" id="meowToggle"> Meow Mode</label>
+<button id="meowSettingsBtn">⚙️</button>
+</div>
+
+<div id="meowSettings">
+<div class="meow-setting-row">
+<label>Frequency (/s)</label>
+<input class="num-spin" type="number" id="meowFreqN" min="0.1" max="20" step="0.1" value="1">
+</div>
+<div class="meow-setting-row">
+<label>Count</label>
+<input class="num-spin" type="number" id="meowCountN" min="1" max="20" step="1" value="1">
+</div>
+<div class="meow-setting-row">
+<label>Delay (ms)</label>
+<input class="num-spin" type="number" id="meowDelayN" min="0" max="2000" step="10" value="0">
+</div>
+<div class="meow-setting-row">
+<label>Slide In (s)</label>
+<input class="num-spin" type="number" id="meowSlideN" min="0" max="10" step="0.1" value="1">
+</div>
+<div class="meow-setting-row">
+<label>Fade (s)</label>
+<input class="num-spin" type="number" id="meowFadeN" min="0.1" max="30" step="0.1" value="3">
+</div>
+<div class="meow-setting-row">
+<label>Direction</label>
+<select id="meowDirSel">
+<option value="0">→ Right</option>
+<option value="1">↑ Up</option>
+<option value="2">↓ Down</option>
+<option value="3">← Left</option>
+</select>
+</div>
+<div class="meow-setting-row">
+<label>Position V (%)</label>
+<input class="num-spin" type="number" id="meowPosN" min="0" max="100" step="1" value="65">
+</div>
+<div class="meow-setting-row">
+<label>Spawn H spread (px)</label>
+<input class="num-spin" type="number" id="meowHeightN" min="0" max="400" step="5" value="20">
+</div>
+<div class="meow-setting-row">
+<label>Spawn W spread (px)</label>
+<input class="num-spin" type="number" id="meowWidthN" min="0" max="800" step="10" value="60">
+</div>
+<div class="meow-setting-row">
+<label>Random tilt (±deg)</label>
+<input class="num-spin" type="number" id="meowTiltN" min="0" max="45" step="1" value="0">
+</div>
+<div class="meow-setting-row">
+<label>Meow Texts (CSV):</label>
+<input type="text" id="meowTexts" placeholder="MEOW!,MEOW!!,MEOW !" value="MEOW!,MEOW !!,MEOW !">
+</div>
+</div>
+
+<header>
+
+<button class="folder-btn" id="btn-all" onclick="loadImages('all')">All</button>
+<button class="folder-btn" id="btn-good" onclick="loadImages('good')">Good</button>
+<button class="folder-btn" id="btn-bad" onclick="loadImages('bad')">Bad</button>
+<button class="folder-btn" onclick="shuffleCurrent()">Shuffle</button>
+
+<button class="folder-btn" id="slideshowBtn" onclick="startSlideshow()">Slideshow</button>
+
+</header>
+
+<div class="gallery" id="gallery"></div>
+
+<!-- viewer -->
+
+<div class="viewer" id="viewer">
+
+<button id="prevBtn" class="nav-btn left">◀</button>
+
+<div class="viewer-image">
+
+<img id="full">
+
+<button id="viewerBad" class="overlay-btn overlay-bad">B</button>
+<button id="viewerGood" class="overlay-btn overlay-good">G</button>
+
+</div>
+
+<button id="nextBtn" class="nav-btn right">▶</button>
+
+</div>
+
+<!-- slideshow -->
+
+<div id="slideshow">
+
+<div class="slide" id="slideA">
+<div class="slide-image">
+<img>
+<button class="overlay-btn overlay-bad">B</button>
+<button class="overlay-btn overlay-good">G</button>
+</div>
+</div>
+<div class="slide" id="slideB">
+<div class="slide-image">
+<img>
+<button class="overlay-btn overlay-bad">B</button>
+<button class="overlay-btn overlay-good">G</button>
+</div>
+</div>
+
+<div id="slideshowControls">
+<button onclick="showSlide(slideIndex-1)" title="Prev">◀</button>
+<button onclick="reversePlay()" title="Play Reverse">⏪</button>
+<button onclick="togglePlay()" title="Play/Pause">⏯</button>
+<button onclick="forwardPlay()" title="Play Forward">⏩</button>
+<button onclick="showSlide(slideIndex+1)" title="Next">▶</button>
+<button onclick="document.getElementById('slideshow').style.display='none'" title="Close">✕</button>
+
+<div id="slideshowSpeedControl">
+<label style="font-size:12px;">img/s:</label>
+<input class="num-spin" type="number" id="speedNum" min="0.1" max="20" step="0.1" value="1">
+</div>
+
+<div id="slideshowMode">
+<span id="modeDisplay">⏸</span>
+</div>
+
+</div>
+<div id="slideProgress" style="width:0%"></div>
+
+</div>
+
+<script>
+
+/* core variables */
+
+const gallery=document.getElementById('gallery')
+const viewer=document.getElementById('viewer')
+const full=document.getElementById('full')
+
+let slideIndex=0
+let slideshowTimer=null
+let slideshowDirection=1
+let playing=false
+let slideshowSpeed=1
+
+let currentImages=[]
+let currentIndex=0
+let currentFolder='all'
+
+/* slideshow start */
+
+function startSlideshow(){
+
+if(currentImages.length===0) return
+
+document.getElementById('slideshow').style.display='block'
+
+slideIndex=0
+showSlide(0)
+
+}
+
+/* fade logic */
+
+function showSlide(i){
+
+if(i<0) i=currentImages.length-1
+if(i>=currentImages.length) i=0
+
+slideIndex=i
+
+// update progress bar at bottom
+if(currentImages.length>1){
+document.getElementById('slideProgress').style.width=(i/(currentImages.length-1)*100)+'%'
+}
+
+const slide1=document.getElementById('slideA')
+const slide2=document.getElementById('slideB')
+
+const active=slide1.classList.contains('active')?slide1:slide2
+const next=active===slide1?slide2:slide1
+
+next.querySelector('img').src=currentImages[i]
+
+active.classList.remove('active')
+next.classList.add('active')
+
+}
+
+/* autoplay */
+
+function playStep(){
+
+showSlide(slideIndex+slideshowDirection)
+
+}
+
+function togglePlay(){
+
+playing=!playing
+updateModeDisplay()
+
+if(playing){
+const interval = Math.round(1000 / slideshowSpeed)
+slideshowTimer=setInterval(playStep, interval)
+}else{
+clearInterval(slideshowTimer)
+}
+
+}
+
+function updateModeDisplay(){
+const modeDisplay = document.getElementById('modeDisplay')
+if(!playing){
+modeDisplay.textContent = '⏸'
+}else if(slideshowDirection === 1){
+modeDisplay.textContent = '▶'
+}else{
+modeDisplay.textContent = '◀'
+}
+}
+
+function forwardPlay(){
+slideshowDirection=1
+if(playing) togglePlay()
+togglePlay()
+updateModeDisplay()
+}
+
+function reversePlay(){
+slideshowDirection=-1
+if(playing) togglePlay()
+togglePlay()
+updateModeDisplay()
+}
+
+/* speed control */
+
+document.getElementById('speedNum').addEventListener('input', e=>{
+slideshowSpeed = parseFloat(e.target.value)||1
+if(playing){
+clearInterval(slideshowTimer)
+const interval = Math.round(1000 / slideshowSpeed)
+slideshowTimer = setInterval(playStep, interval)
+}
+})
+
+/* middle-click and scrolling - allow document scrolling in slideshow */
+
+document.addEventListener('mousedown', e => {
+if(e.button === 1){
+// Middle button - don't prevent, let it scroll
+// But we'll track it for potential slide navigation if user prefers
+}
+})
+
+/* wheel scroll - allow scrolling but also navigate slides */
+
+document.addEventListener('wheel', e => {
+const slideshow = document.getElementById('slideshow')
+if(slideshow.style.display !== 'block') return
+
+// Allow natural scrolling of the page
+}, {passive: true})
+
+/* keyboard controls in slideshow */
+
+document.addEventListener('keydown', e => {
+const slideshow = document.getElementById('slideshow')
+if(slideshow.style.display !== 'block') return
+
+if(e.key === 'ArrowRight' || e.code === 'Space') showSlide(slideIndex + 1)
+if(e.key === 'ArrowLeft') showSlide(slideIndex - 1)
+if(e.key === 'Escape') slideshow.style.display = 'none'
+if(e.key === ' ') e.preventDefault()
+})
+
+/* gallery */
+
+function createImageContainer(src){
+
+const c=document.createElement('div')
+c.className='image-container'
+
+const img=document.createElement('img')
+img.src=src
+
+img.onclick=()=>{
+currentIndex=currentImages.indexOf(src)
+viewer.style.display='flex'
+full.src=src
+}
+
+const g=document.createElement('button')
+g.className='overlay-btn overlay-good'
+g.textContent='G'
+g.onclick=e=>{
+e.stopPropagation()
+moveGalleryImage(src, currentFolder==='good'?'regular':'good', c)
+}
+
+const b=document.createElement('button')
+b.className='overlay-btn overlay-bad'
+b.textContent='B'
+b.onclick=e=>{
+e.stopPropagation()
+moveGalleryImage(src, currentFolder==='bad'?'regular':'bad', c)
+}
+
+c.appendChild(img)
+c.appendChild(g)
+c.appendChild(b)
+
+return c
+
+}
+
+function renderImages(images){
+
+gallery.innerHTML=''
+
+images.forEach(i=>{
+gallery.appendChild(createImageContainer(i))
+})
+
+}
+
+function loadImages(folder){
+
+currentFolder=folder
+
+fetch(`/api/list?folder=${folder}`)
+.then(r=>r.json())
+.then(images=>{
+currentImages=images
+renderImages(images)
+loadCounts()
+})
+
+}
+
+function shuffleCurrent(){
+
+currentImages.sort(()=>Math.random()-.5)
+renderImages(currentImages)
+
+}
+
+function moveGalleryImage(src, target, container){
+fetch('/api/move',{
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({image:src.split('/').pop(), target})
+}).then(r=>{
+if(r.ok){
+container.remove()
+currentImages=currentImages.filter(i=>i!==src)
+loadCounts()
+}
+})
+}
+
+/* counts and viewer navigation */
+
+function loadCounts(){
+const btnAll = document.getElementById('btn-all')
+const btnGood = document.getElementById('btn-good')
+const btnBad = document.getElementById('btn-bad')
+
+fetch('/api/counts')
+.then(r=>r.json())
+.then(data=>{
+btnAll.textContent = `All (${data.all})`
+btnGood.textContent = `Good (${data.good})`
+btnBad.textContent = `Bad (${data.bad})`
+})
+}
+
+function showImage(index){
+if(index<0) index=currentImages.length-1
+if(index>=currentImages.length) index=0
+currentIndex=index
+full.src=currentImages[currentIndex]
+viewer.style.display='flex'
+}
+
+function nextImage(){ showImage(currentIndex+1) }
+function prevImage(){ showImage(currentIndex-1) }
+
+document.getElementById('nextBtn').onclick=e=>{e.stopPropagation(); nextImage()}
+document.getElementById('prevBtn').onclick=e=>{e.stopPropagation(); prevImage()}
+
+document.addEventListener('keydown', e=>{
+if(viewer.style.display==='flex'){
+if(e.key==='ArrowRight' || e.code==='Space') nextImage()
+if(e.key==='ArrowLeft') prevImage()
+if(e.key==='Escape') viewer.style.display='none'
+}
+})
+
+viewer.onclick=e=>{
+if(e.target===viewer) viewer.style.display='none'
+}
+
+/* viewer G/B buttons */
+
+function moveViewerImage(target){
+const src = currentImages[currentIndex]
+fetch('/api/move',{
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({image:src.split('/').pop(), target})
+}).then(r=>{
+if(r.ok){
+currentImages.splice(currentIndex, 1)
+if(currentImages.length===0) viewer.style.display='none'
+else if(currentIndex>=currentImages.length) currentIndex--
+if(currentImages.length>0) showImage(currentIndex)
+loadCounts()
+}
+})
+}
+
+document.getElementById('viewerGood').onclick=e=>{
+e.stopPropagation()
+moveViewerImage(currentFolder==='good'?'regular':'good')
+}
+
+document.getElementById('viewerBad').onclick=e=>{
+e.stopPropagation()
+moveViewerImage(currentFolder==='bad'?'regular':'bad')
+}
+
+/* slideshow G/B buttons */
+
+function moveSlideshowImage(target){
+const src = currentImages[slideIndex]
+if(!src) return
+fetch('/api/move',{
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({image:src.split('/').pop(), target})
+}).then(r=>{
+if(r.ok){
+currentImages.splice(slideIndex, 1)
+if(currentImages.length===0){ document.getElementById('slideshow').style.display='none'; return }
+showSlide(slideIndex >= currentImages.length ? 0 : slideIndex)
+loadCounts()
+}
+})
+}
+
+document.querySelectorAll('.slide .overlay-good').forEach(btn=>{
+btn.onclick=e=>{
+e.stopPropagation()
+moveSlideshowImage(currentFolder==='good'?'regular':'good')
+}
+})
+
+document.querySelectorAll('.slide .overlay-bad').forEach(btn=>{
+btn.onclick=e=>{
+e.stopPropagation()
+moveSlideshowImage(currentFolder==='bad'?'regular':'bad')
+}
+})
+
+/* meow settings */
+
+const meowToggle = document.getElementById('meowToggle')
+const meowSettingsBtn = document.getElementById('meowSettingsBtn')
+const meowSettingsPanel = document.getElementById('meowSettings')
+const meowTexts = document.getElementById('meowTexts')
+
+const meowFreqN = document.getElementById('meowFreqN')
+const meowCountN = document.getElementById('meowCountN')
+const meowDelayN = document.getElementById('meowDelayN')
+const meowSlideN = document.getElementById('meowSlideN')
+const meowFadeN = document.getElementById('meowFadeN')
+const meowDirSel = document.getElementById('meowDirSel')
+const meowPosN = document.getElementById('meowPosN')
+const meowHeightN = document.getElementById('meowHeightN')
+const meowWidthN = document.getElementById('meowWidthN')
+const meowTiltN = document.getElementById('meowTiltN')
+
+let meowFrequency = 1
+let meowCount = 1
+let meowDelayMs = 0
+let meowSlideDuration = 1
+let meowFadeDuration = 3
+let meowDirection = 0
+let meowPosition = 65
+let meowSpawnHeight = 20
+let meowSpawnWidth = 60
+let meowTilt = 0
+
+meowSettingsBtn.addEventListener('click', () => {
+meowSettingsPanel.classList.toggle('open')
+})
+
+document.addEventListener('click', e => {
+if(!meowSettingsPanel.contains(e.target) && e.target !== meowSettingsBtn){
+meowSettingsPanel.classList.remove('open')
+}
+})
+
+;[meowFreqN,meowCountN,meowDelayN,meowSlideN,meowFadeN,meowPosN,meowHeightN,meowWidthN,meowTiltN,meowDirSel,meowTexts].forEach(el=>{
+el.addEventListener('input', ()=>{
+meowFrequency = parseFloat(meowFreqN.value)||1
+meowCount = parseInt(meowCountN.value)||1
+meowDelayMs = parseInt(meowDelayN.value)||0
+meowSlideDuration = parseFloat(meowSlideN.value)||1
+meowFadeDuration = parseFloat(meowFadeN.value)||3
+meowDirection = parseInt(meowDirSel.value)||0
+meowPosition = parseInt(meowPosN.value)||65
+meowSpawnHeight = parseInt(meowHeightN.value)||0
+meowSpawnWidth = parseInt(meowWidthN.value)||0
+meowTilt = parseInt(meowTiltN.value)||0
+saveMeowSettings()
+})
+})
+
+function saveMeowSettings(){
+const settings = {
+frequency: meowFrequency, count: meowCount, delayMs: meowDelayMs,
+slideDuration: meowSlideDuration, fadeDuration: meowFadeDuration,
+direction: meowDirection, position: meowPosition,
+spawnHeight: meowSpawnHeight, spawnWidth: meowSpawnWidth,
+tilt: meowTilt, texts: meowTexts.value
+}
+document.cookie = 'meowSettings=' + encodeURIComponent(JSON.stringify(settings)) + '; path=/; max-age=31536000'
+}
+
+function loadMeowSettings(){
+const cookies = document.cookie.split(';')
+for(let cookie of cookies){
+const [name, val] = cookie.trim().split('=')
+if(name === 'meowSettings'){
+try{
+const s = JSON.parse(decodeURIComponent(val))
+meowFrequency = s.frequency||1; meowCount = s.count||1; meowDelayMs = s.delayMs||0
+meowSlideDuration = s.slideDuration||1; meowFadeDuration = s.fadeDuration||3
+meowDirection = s.direction||0; meowPosition = s.position||65
+meowSpawnHeight = s.spawnHeight!==undefined ? s.spawnHeight : 20
+meowSpawnWidth = s.spawnWidth!==undefined ? s.spawnWidth : 60
+meowTilt = s.tilt||0
+meowFreqN.value = meowFrequency; meowCountN.value = meowCount; meowDelayN.value = meowDelayMs
+meowSlideN.value = meowSlideDuration; meowFadeN.value = meowFadeDuration
+meowDirSel.value = meowDirection; meowPosN.value = meowPosition
+meowHeightN.value = meowSpawnHeight; meowWidthN.value = meowSpawnWidth
+meowTiltN.value = meowTilt
+if(s.texts) meowTexts.value = s.texts
+}catch(e){}
+break
+}
+}
+}
+
+function startMeowSpawning(){
+let nextSpawnTime = 0
+setInterval(() => {
+if(!meowToggle.checked) return
+const now = Date.now()
+const timeSinceLastSpawn = now - nextSpawnTime
+const intervalMs = Math.ceil(1000 / meowFrequency)
+if(timeSinceLastSpawn < intervalMs) return
+nextSpawnTime = now
+
+const textList = meowTexts.value.split(',').map(t => t.trim()).filter(t => t.length > 0)
+if(textList.length === 0) return
+
+// Spawn multiple meows
+for(let n = 0; n < meowCount; n++){
+// Calculate randomness upfront so each meow gets unique values
+const offsetY = Math.random() * meowSpawnHeight - meowSpawnHeight / 2
+const offsetX = Math.random() * meowSpawnWidth - meowSpawnWidth / 2
+const tiltDeg = meowTilt > 0 ? (Math.random() * 2 - 1) * meowTilt : 0
+const dirRandom = Math.random() > 0.5 ? 100 : -100
+
+setTimeout(() => {
+// Calculate direction movement
+let moveYStart = 0, moveYEnd = 0, moveXStart = 0, moveXEnd = 0
+
+if(meowDirection === 0){
+// → right
+moveXStart = -100
+moveXEnd = 100
+} else if(meowDirection === 1){
+// ↑ up
+moveYStart = 100
+moveYEnd = -100
+} else if(meowDirection === 2){
+// ↓ down
+moveYStart = -100
+moveYEnd = 100
+} else if(meowDirection === 3){
+// ← left
+moveXStart = dirRandom
+moveXEnd = -dirRandom
+}
+
+const m = document.createElement('div')
+m.className = 'meow'
+m.textContent = textList[Math.floor(Math.random() * textList.length)]
+m.style.top = meowPosition + '%'
+m.style.left = '50%'
+m.style.setProperty('--meow-slide', meowSlideDuration + 's')
+m.style.setProperty('--meow-duration', meowFadeDuration + 's')
+m.style.setProperty('--meow-visible-y', offsetY + 'px')
+m.style.setProperty('--meow-visible-x', offsetX + 'px')
+m.style.setProperty('--meow-start-y', (moveYStart + offsetY) + 'px')
+m.style.setProperty('--meow-start-x', (moveXStart + offsetX) + 'px')
+m.style.setProperty('--meow-end-y', (moveYEnd + offsetY) + 'px')
+m.style.setProperty('--meow-end-x', (moveXEnd + offsetX) + 'px')
+m.style.setProperty('--meow-tilt', tiltDeg + 'deg')
+document.body.appendChild(m)
+setTimeout(() => m.remove(), (meowSlideDuration + meowFadeDuration) * 1000)
+}, meowDelayMs * n)
+}
+}, 50)
+}
+
+meowToggle.addEventListener('change', () => {
+saveMeowSettings()
+})
+
+loadCounts()
+loadMeowSettings()
+startMeowSpawning()
+loadImages('all')
+
+</script>
+
+</body>
+</html>
