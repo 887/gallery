@@ -62,6 +62,13 @@ border-radius:6px;
 display:flex;
 gap:5px;
 align-items:center;
+transition:opacity 0.3s ease;
+opacity:1;
+}
+
+#meowControl.hidden{
+opacity:0;
+pointer-events:none;
 }
 
 #meowSettings{
@@ -575,6 +582,7 @@ font-size:12px;
 
 <button onclick="prevImage()" title="Prev" class="control-btn">◀</button>
 <button onclick="nextImage()" title="Next" class="control-btn">▶</button>
+<button onclick="closeViewer()" title="Close" class="control-btn">✕</button>
 
 <div class="control-section" style="margin-left:auto;">
 <button onclick="toggleImageScale()" title="Toggle scale" class="control-btn" style="font-size:11px;">📐</button>
@@ -949,12 +957,14 @@ const slideshowControls = document.getElementById('slideshowControls')
 function resetControlsHideTimer(){
 clearTimeout(controlsHideTimer)
 slideshowControls.classList.remove('hidden')
+document.getElementById('meowControl').classList.remove('hidden')
 document.querySelectorAll('#slideshow .nav-btn').forEach(btn => btn.classList.remove('hidden'))
 resetSlideshowOverlayButtons()
 controlsHideTimer = setTimeout(() => {
 const slideshow = document.getElementById('slideshow')
 if(slideshow.style.display === 'block'){
 slideshowControls.classList.add('hidden')
+document.getElementById('meowControl').classList.add('hidden')
 document.querySelectorAll('#slideshow .nav-btn').forEach(btn => btn.classList.add('hidden'))
 document.querySelectorAll('.slide .overlay-bad, .slide .overlay-good').forEach(btn => {
 btn.classList.add('hidden')
@@ -982,11 +992,13 @@ function resetViewerButtonsHideTimer(){
 clearTimeout(viewerButtonsHideTimer)
 const viewerControls = document.getElementById('viewerControls')
 viewerControls.classList.remove('hidden')
+document.getElementById('meowControl').classList.remove('hidden')
 document.querySelectorAll('#viewer .nav-btn').forEach(btn => btn.classList.remove('hidden'))
 viewerButtonsHideTimer = setTimeout(() => {
 const viewer = document.getElementById('viewer')
 if(viewer.style.display === 'flex'){
 viewerControls.classList.add('hidden')
+document.getElementById('meowControl').classList.add('hidden')
 document.querySelectorAll('#viewer .nav-btn').forEach(btn => btn.classList.add('hidden'))
 }
 }, 2000)
@@ -1360,24 +1372,25 @@ viewerBad.style.display = 'block'
 
 function nextImage(){ showImage(currentIndex+1) }
 function prevImage(){ showImage(currentIndex-1) }
+function closeViewer(){
+viewer.style.display='none'
+document.querySelector('header').style.display='block'
+window.scrollTo(0, galleryScrollPosition)
+}
 
 document.addEventListener('keydown', e=>{
 if(viewer.style.display==='flex'){
 if(e.key==='ArrowRight' || e.code==='Space') nextImage()
 if(e.key==='ArrowLeft') prevImage()
 if(e.key==='Escape'){
-viewer.style.display='none'
-document.querySelector('header').style.display='block'
-window.scrollTo(0, galleryScrollPosition)
+closeViewer()
 }
 }
 })
 
 viewer.onclick=e=>{
 if(e.target===viewer){
-viewer.style.display='none'
-document.querySelector('header').style.display='block'
-window.scrollTo(0, galleryScrollPosition)
+closeViewer()
 }
 }
 
@@ -1393,9 +1406,7 @@ body:JSON.stringify({image:src.startsWith('/')?src.slice(1):src, target})
 if(r.ok){
 currentImages.splice(currentIndex, 1)
 if(currentImages.length===0){
-viewer.style.display='none'
-document.querySelector('header').style.display='block'
-window.scrollTo(0, galleryScrollPosition)
+closeViewer()
 }
 else if(currentIndex>=currentImages.length) currentIndex--
 if(currentImages.length>0) showImage(currentIndex)
@@ -1521,6 +1532,10 @@ let meowSpawnWidth = 1900
 let meowTilt = 12
 
 meowSettingsBtn.addEventListener('click', () => {
+const slideshow = document.getElementById('slideshow')
+const viewer = document.getElementById('viewer')
+if(slideshow.style.display === 'block') resetControlsHideTimer()
+if(viewer.style.display === 'flex') resetViewerButtonsHideTimer()
 meowSettingsPanel.classList.toggle('open')
 })
 
@@ -1532,6 +1547,10 @@ meowSettingsPanel.classList.remove('open')
 
 ;[meowFreqN,meowCountN,meowDelayN,meowSlideN,meowFadeN,meowPosN,meowHeightN,meowWidthN,meowTiltN,meowDirSel,meowTexts].forEach(el=>{
 el.addEventListener('input', ()=>{
+const slideshow = document.getElementById('slideshow')
+const viewer = document.getElementById('viewer')
+if(slideshow.style.display === 'block') resetControlsHideTimer()
+if(viewer.style.display === 'flex') resetViewerButtonsHideTimer()
 meowFrequency = parseFloat(meowFreqN.value)||1
 meowCount = parseInt(meowCountN.value)||1
 meowDelayMs = parseInt(meowDelayN.value)||0
@@ -1647,6 +1666,10 @@ setTimeout(() => m.remove(), (meowSlideDuration + meowFadeDuration) * 1000)
 }
 
 meowToggle.addEventListener('change', () => {
+const slideshow = document.getElementById('slideshow')
+const viewer = document.getElementById('viewer')
+if(slideshow.style.display === 'block') resetControlsHideTimer()
+if(viewer.style.display === 'flex') resetViewerButtonsHideTimer()
 saveMeowSettings()
 })
 
