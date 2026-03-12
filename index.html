@@ -6,13 +6,13 @@
 
 <style>
 
-html{height:100%;}
+html{min-height:100%;}
 body{
 background:#111;
 color:white;
 font-family:sans-serif;
 margin:0;
-height:100%;
+min-height:100vh;
 }
 
 /* header */
@@ -23,8 +23,10 @@ text-align:center;
 position:sticky;
 top:0;
 z-index:1000;
-background:#111;
-border-bottom:1px solid rgba(255,255,255,0.1);
+display:flex;
+justify-content:center;
+gap:5px;
+align-items:center;
 }
 
 button.folder-btn{
@@ -65,6 +67,8 @@ align-items:center;
 transition:opacity 0.3s ease;
 opacity:1;
 }
+
+
 
 #meowControl.hidden{
 opacity:0;
@@ -160,8 +164,7 @@ display:block;
 /* overlay buttons */
 
 .overlay-btn{
-position:absolute;
-bottom:5px;
+position:relative;
 padding:2px 5px;
 font-size:12px;
 border:none;
@@ -171,15 +174,15 @@ border-radius:3px;
 cursor:pointer;
 opacity:0.8;
 transition:opacity 0.3s ease;
+z-index:100;
+margin:0;
+flex-shrink:0;
 }
 
 .overlay-btn.hidden{
 opacity:0;
 pointer-events:none;
 }
-
-.overlay-good{right:5px;}
-.overlay-bad{left:5px;}
 
 .overlay-btn:hover{opacity:1;}
 
@@ -192,6 +195,7 @@ background:rgba(0,0,0,.95);
 display:none;
 align-items:center;
 justify-content:center;
+z-index:5001;
 }
 
 .viewer-image{
@@ -551,9 +555,8 @@ font-size:12px;
 
 <header>
 
-<button class="folder-btn" id="btn-all" onclick="loadImages('all')">All</button>
-<button class="folder-btn" id="btn-good" onclick="loadImages('good')">Good</button>
-<button class="folder-btn" id="btn-bad" onclick="loadImages('bad')">Bad</button>
+<div id="folderButtonsContainer"></div>
+
 <button class="folder-btn" onclick="shuffleCurrent()">Shuffle</button>
 
 <button class="folder-btn" id="slideshowBtn" onclick="startSlideshow()">Slideshow</button>
@@ -649,12 +652,7 @@ font-size:12px;
 <div class="control-counter">
 <span id="slideshowCounterDisplay">1/0</span>
 </div>
-
-<button id="slideshowBad" class="control-btn control-btn-small">B</button>
-<button id="slideshowRemove" class="control-btn control-btn-small">R</button>
-<button id="slideshowGood" class="control-btn control-btn-small">G</button>
 </div>
-
 </div>
 <div id="slideProgress" style="width:0%"></div>
 
@@ -678,7 +676,56 @@ let autoAdvanceTimeout=null
 
 let currentImages=[]
 let currentIndex=0
-let currentFolder='all'
+let currentFolder='root'
+let allFolders=[]
+
+/* folder button logic */
+
+function generateSmartAbbreviation(folderName, otherFolders) {
+    const allNames = [folderName, ...otherFolders];
+    for(let len = 1; len <= folderName.length; len++) {
+        const abbr = folderName.substring(0, len).toUpperCase();
+        const conflicts = allNames.filter(n => 
+            n !== folderName && n.substring(0, len).toUpperCase() === abbr
+        );
+        if(conflicts.length === 0) return abbr;
+    }
+    return folderName.substring(0, 3).toUpperCase();
+}
+
+function loadFolderButtons() {
+    fetch('/api/folders')
+        .then(r => r.json())
+        .then(folders => {
+            allFolders = folders;
+            renderFolderButtons();
+        });
+}
+
+function renderFolderButtons() {
+    const container = document.getElementById('folderButtonsContainer');
+    container.innerHTML = '';
+    container.style.display = 'flex';
+    container.style.gap = '5px';
+    
+    // Add root button
+    const rootBtn = document.createElement('button');
+    rootBtn.className = 'folder-btn ' + (currentFolder === 'root' ? 'active' : '');
+    rootBtn.textContent = 'All';
+    rootBtn.onclick = () => loadImages('root');
+    container.appendChild(rootBtn);
+    
+    // Add folder buttons
+    allFolders.forEach(folder => {
+        const btn = document.createElement('button');
+        const abbr = generateSmartAbbreviation(folder, allFolders.filter(f => f !== folder));
+        btn.className = 'folder-btn ' + (currentFolder === folder ? 'active' : '');
+        btn.textContent = abbr;
+        btn.title = folder;
+        btn.onclick = () => loadImages(folder);
+        container.appendChild(btn);
+    });
+}
 
 /* slideshow start */
 
@@ -708,7 +755,8 @@ resetControlsHideTimer()
 
 function closeSlideshowAndReset(){
 document.getElementById('slideshow').style.display='none'
-document.querySelector('header').style.display='block'
+const header = document.querySelector('header')
+if(header) header.style.display='flex'
 document.body.style.height = ''
 window.scrollTo(0, galleryScrollPosition)
 clearTimeout(controlsHideTimer)
@@ -1164,8 +1212,13 @@ setTimeout(() => { ignoreScrollEvents = false }, 200)
 
 // Show viewer and image
 viewer.style.display='flex'
-document.querySelector('header').style.display='none'
+const header = document.querySelector('header')
+if(header) header.style.display='none'
 full.src=src
+
+// Hide overlay buttons on gallery images when in fullscreen
+const galleryButtons = document.querySelectorAll('.image-container div[style*="position: absolute"]')
+galleryButtons.forEach(btn => btn.style.display = 'none')
 
 // Update viewer counter with correct index
 const viewerCounterDisplay = document.getElementById('viewerCounterDisplay')
@@ -1174,37 +1227,66 @@ viewerCounterDisplay.textContent = (currentIndex+1) + '/' + currentImages.length
 }
 
 // Update button visibility based on current folder
-updateViewerButtonVisibility()
+updateViewerFolderButtons()
 
 // Reset button fade timer
 resetViewerButtonsHideTimer()
 }
 
-const g=document.createElement('button')
-g.className='overlay-btn overlay-good'
-g.textContent=currentFolder==='good' ? 'R' : currentFolder==='bad' ? 'G' : 'G'
-g.onclick=e=>{
-e.stopPropagation()
-let target = 'good'
-if(currentFolder==='good') target='regular'
-else if(currentFolder==='bad') target='good'
-moveGalleryImage(src, target, c)
-}
+// Create horizontal row of move buttons at bottom
+// Create horizontal button row at bottom right
+const buttonRow = document.createElement('div')
+buttonRow.style.position = 'absolute'
+buttonRow.style.bottom = '5px'
+buttonRow.style.right = '5px'
+buttonRow.style.display = 'flex'
+buttonRow.style.gap = '5px'
+buttonRow.style.flexDirection = 'row'
+buttonRow.style.zIndex = '100'
 
-const b=document.createElement('button')
-b.className='overlay-btn overlay-bad'
-b.textContent=currentFolder==='bad' ? 'R' : currentFolder==='good' ? 'B' : 'B'
-b.onclick=e=>{
-e.stopPropagation()
-let target = 'bad'
-if(currentFolder==='bad') target='regular'
-else if(currentFolder==='good') target='bad'
-moveGalleryImage(src, target, c)
+if(currentFolder === 'root') {
+// In root, can move to any folder - show all
+allFolders.forEach(folder => {
+const btn = document.createElement('button')
+const abbr = generateSmartAbbreviation(folder, allFolders.filter(f => f !== folder))
+btn.className = 'overlay-btn'
+btn.textContent = abbr
+btn.title = 'Move to ' + folder
+btn.onclick = e => {
+    e.stopPropagation()
+    moveGalleryImage(src, folder, c)
+}
+buttonRow.appendChild(btn)
+})
+} else {
+// In a subfolder, show up and other folders
+const upBtn = document.createElement('button')
+upBtn.className = 'overlay-btn'
+upBtn.textContent = '↑'
+upBtn.title = 'Move to root'
+upBtn.onclick = e => {
+    e.stopPropagation()
+    moveGalleryImage(src, 'root', c)
+}
+buttonRow.appendChild(upBtn)
+
+const otherFolders = allFolders.filter(f => f !== currentFolder)
+otherFolders.forEach(folder => {
+const btn = document.createElement('button')
+const abbr = generateSmartAbbreviation(folder, otherFolders.filter(f => f !== folder))
+btn.className = 'overlay-btn'
+btn.textContent = abbr
+btn.title = 'Move to ' + folder
+btn.onclick = e => {
+    e.stopPropagation()
+    moveGalleryImage(src, folder, c)
+}
+buttonRow.appendChild(btn)
+})
 }
 
 c.appendChild(img)
-c.appendChild(g)
-c.appendChild(b)
+c.appendChild(buttonRow)
 
 return c
 
@@ -1220,61 +1302,163 @@ gallery.appendChild(createImageContainer(i))
 
 }
 
-function updateSlideshowButtonLabels(){
-document.querySelectorAll('.slide .overlay-good').forEach(btn=>{
-btn.textContent=currentFolder==='good'?'R':currentFolder==='bad'?'G':'G'
-})
-document.querySelectorAll('.slide .overlay-bad').forEach(btn=>{
-btn.textContent=currentFolder==='bad'?'R':currentFolder==='good'?'B':'B'
-})
-const slideshowGood = document.getElementById('slideshowGood')
-const slideshowBad = document.getElementById('slideshowBad')
-if(slideshowGood) slideshowGood.textContent = currentFolder==='good'?'R':currentFolder==='bad'?'G':'G'
-if(slideshowBad) slideshowBad.textContent = currentFolder==='bad'?'R':currentFolder==='good'?'B':'B'
+function updateSlideshowFolderButtons(){
+// Remove old move buttons (keep other controls)
+const controlSection = document.querySelector('#slideshowControls .control-section');
+if(!controlSection) return;
+
+const oldMoveButtons = controlSection.querySelectorAll('[data-move-btn]');
+oldMoveButtons.forEach(btn => btn.remove());
+
+// Only show relevant buttons based on folder
+if(currentFolder === 'root') {
+// In root, can move to any folder - show ALL folders
+allFolders.forEach(folder => {
+const btn = document.createElement('button');
+btn.setAttribute('data-move-btn', 'true');
+btn.className = 'control-btn control-btn-small';
+btn.textContent = generateSmartAbbreviation(folder, allFolders.filter(f => f !== folder));
+btn.title = 'Move to ' + folder;
+btn.onclick = () => {
+if(slideIndex >= 0 && slideIndex < currentImages.length) {
+const src = currentImages[slideIndex];
+moveGalleryImage(src, folder, null);
+nextOrCloseSlideshow();
+}
+};
+controlSection.appendChild(btn);
+});
+} else {
+// In a subfolder, show up arrow and all other folders
+const upBtn = document.createElement('button');
+upBtn.setAttribute('data-move-btn', 'true');
+upBtn.className = 'control-btn control-btn-small';
+upBtn.textContent = '↑';
+upBtn.title = 'Move to root';
+upBtn.onclick = () => {
+if(slideIndex >= 0 && slideIndex < currentImages.length) {
+const src = currentImages[slideIndex];
+moveGalleryImage(src, 'root', null);
+nextOrCloseSlideshow();
+}
+};
+controlSection.appendChild(upBtn);
+
+const otherFolders = allFolders.filter(f => f !== currentFolder);
+otherFolders.forEach(folder => {
+const btn = document.createElement('button');
+btn.setAttribute('data-move-btn', 'true');
+btn.className = 'control-btn control-btn-small';
+btn.textContent = generateSmartAbbreviation(folder, otherFolders.filter(f => f !== folder));
+btn.title = 'Move to ' + folder;
+btn.onclick = () => {
+if(slideIndex >= 0 && slideIndex < currentImages.length) {
+const src = currentImages[slideIndex];
+moveGalleryImage(src, folder, null);
+nextOrCloseSlideshow();
+}
+};
+controlSection.appendChild(btn);
+});
+}
 }
 
-function updateSlideshowButtonVisibility(){
-const slideshowBad = document.getElementById('slideshowBad')
-const slideshowRemove = document.getElementById('slideshowRemove')
-const slideshowGood = document.getElementById('slideshowGood')
+function nextOrCloseSlideshow(){
+const nextIdx = slideIndex + 1;
+if(nextIdx >= currentImages.length) {
+closeSlideshowAndReset();
+loadImages(currentFolder);
+} else {
+showSlide(nextIdx);
+}
+}
 
-// Hide all first
-slideshowBad.style.display = 'none'
-slideshowRemove.style.display = 'none'
-slideshowGood.style.display = 'none'
+function updateViewerFolderButtons(){
+// Remove old move buttons (keep other controls)
+const controlSection = document.querySelector('#viewerControls .control-section');
+if(!controlSection) return;
 
-// Show only the two possible destinations
-if(currentFolder==='good'){
-// In good folder, can move to bad or regular
-slideshowBad.style.display = 'block'
-slideshowRemove.style.display = 'block'
-}else if(currentFolder==='bad'){
-// In bad folder, can move to good or regular
-slideshowGood.style.display = 'block'
-slideshowRemove.style.display = 'block'
-}else{
-// In all/regular, can move to good or bad
-slideshowGood.style.display = 'block'
-slideshowBad.style.display = 'block'
+const oldMoveButtons = controlSection.querySelectorAll('[data-move-btn]');
+oldMoveButtons.forEach(btn => btn.remove());
+
+if(currentFolder === 'root') {
+// In root, can move to any folder - show ALL folders
+allFolders.forEach(folder => {
+const btn = document.createElement('button');
+btn.setAttribute('data-move-btn', 'true');
+btn.className = 'control-btn control-btn-small';
+btn.textContent = generateSmartAbbreviation(folder, allFolders.filter(f => f !== folder));
+btn.title = 'Move to ' + folder;
+btn.onclick = () => {
+if(currentIndex >= 0 && currentIndex < currentImages.length) {
+const src = currentImages[currentIndex];
+moveGalleryImage(src, folder, null);
+nextImageOrClose();
+}
+};
+controlSection.appendChild(btn);
+});
+} else {
+// In a subfolder, show up arrow and all other folders
+const upBtn = document.createElement('button');
+upBtn.setAttribute('data-move-btn', 'true');
+upBtn.className = 'control-btn control-btn-small';
+upBtn.textContent = '↑';
+upBtn.title = 'Move to root';
+upBtn.onclick = () => {
+if(currentIndex >= 0 && currentIndex < currentImages.length) {
+const src = currentImages[currentIndex];
+moveGalleryImage(src, 'root', null);
+nextImageOrClose();
+}
+};
+controlSection.appendChild(upBtn);
+
+const otherFolders = allFolders.filter(f => f !== currentFolder);
+otherFolders.forEach(folder => {
+const btn = document.createElement('button');
+btn.setAttribute('data-move-btn', 'true');
+btn.className = 'control-btn control-btn-small';
+btn.textContent = generateSmartAbbreviation(folder, otherFolders.filter(f => f !== folder));
+btn.title = 'Move to ' + folder;
+btn.onclick = () => {
+if(currentIndex >= 0 && currentIndex < currentImages.length) {
+const src = currentImages[currentIndex];
+moveGalleryImage(src, folder, null);
+nextImageOrClose();
+}
+};
+controlSection.appendChild(btn);
+});
+}
+}
+
+function nextImageOrClose(){
+const nextIdx = currentIndex + 1;
+if(nextIdx >= currentImages.length) {
+closeViewer();
+loadImages(currentFolder);
+} else {
+showImage(nextIdx);
 }
 }
 
 function loadImages(folder){
 
-currentFolder=folder
+currentFolder = folder === 'root' || folder === 'all' ? 'root' : folder
 
-fetch(`/api/list?folder=${folder}`)
+fetch(`/api/list?folder=${currentFolder}`)
 .then(r=>r.json())
 .then(images=>{
 currentImages=images
 renderImages(images)
 loadCounts()
-updateSlideshowButtonLabels()
-updateSlideshowButtonVisibility()
+renderFolderButtons()
+updateSlideshowFolderButtons()
 
 // If viewer is open, update its button visibility for new folder
 if(viewer.style.display==='flex'){
-updateViewerButtonVisibility()
+updateViewerFolderButtons()
 }
 })
 
@@ -1294,26 +1478,29 @@ headers:{'Content-Type':'application/json'},
 body:JSON.stringify({image:src.startsWith('/')?src.slice(1):src, target})
 }).then(r=>{
 if(r.ok){
-container.remove()
+if(container) container.remove()
 currentImages=currentImages.filter(i=>i!==src)
 loadCounts()
+renderImages(currentImages)
 }
-})
-}
+})}
+
 
 /* counts and viewer navigation */
 
 function loadCounts(){
-const btnAll = document.getElementById('btn-all')
-const btnGood = document.getElementById('btn-good')
-const btnBad = document.getElementById('btn-bad')
-
 fetch('/api/counts')
 .then(r=>r.json())
 .then(data=>{
-btnAll.textContent = `All (${data.all})`
-btnGood.textContent = `Good (${data.good})`
-btnBad.textContent = `Bad (${data.bad})`
+// Update floating folder buttons with counts
+const btns = document.querySelectorAll('#folderButtonsContainer .folder-btn');
+btns.forEach(btn => {
+const text = btn.textContent.split(' (')[0];
+const attr = btn.title;
+let key = text === 'All' ? 'root' : attr;
+const count = data[key] || 0;
+btn.textContent = text + ' (' + count + ')';
+});
 })
 }
 
@@ -1329,7 +1516,12 @@ if(index>=currentImages.length) index=0
 currentIndex=index
 full.src=currentImages[currentIndex]
 viewer.style.display='flex'
-document.querySelector('header').style.display='none'
+const header = document.querySelector('header')
+if(header) header.style.display='none'
+
+// Hide overlay buttons on gallery images when in fullscreen
+const galleryButtons = document.querySelectorAll('.image-container div[style*="position: absolute"]')
+galleryButtons.forEach(btn => btn.style.display = 'none')
 
 // Update viewer counter
 const viewerCounterDisplay = document.getElementById('viewerCounterDisplay')
@@ -1338,43 +1530,18 @@ viewerCounterDisplay.textContent = (index+1) + '/' + currentImages.length
 }
 
 // Update button visibility
-updateViewerButtonVisibility()
+updateViewerFolderButtons()
 
 // Reset button fade timer
 resetViewerButtonsHideTimer()
 }
 
-function updateViewerButtonVisibility(){
-const viewerBad = document.getElementById('viewerBad')
-const viewerRemove = document.getElementById('viewerRemove')
-const viewerGood = document.getElementById('viewerGood')
-
-// Hide all first
-viewerBad.style.display = 'none'
-viewerRemove.style.display = 'none'
-viewerGood.style.display = 'none'
-
-// Show only the two possible destinations
-if(currentFolder==='good'){
-// In good folder, can move to bad or regular
-viewerBad.style.display = 'block'
-viewerRemove.style.display = 'block'
-}else if(currentFolder==='bad'){
-// In bad folder, can move to good or regular
-viewerGood.style.display = 'block'
-viewerRemove.style.display = 'block'
-}else{
-// In all/regular, can move to good or bad
-viewerGood.style.display = 'block'
-viewerBad.style.display = 'block'
-}
-}
-
-function nextImage(){ showImage(currentIndex+1) }
-function prevImage(){ showImage(currentIndex-1) }
 function closeViewer(){
 viewer.style.display='none'
-document.querySelector('header').style.display='block'
+document.querySelector('header').style.display='flex'
+// Show overlay buttons on gallery images again
+const galleryButtons = document.querySelectorAll('.image-container div[style*="position: absolute"]')
+galleryButtons.forEach(btn => btn.style.display = 'flex')
 window.scrollTo(0, galleryScrollPosition)
 }
 
@@ -1394,64 +1561,10 @@ closeViewer()
 }
 }
 
-/* viewer G/B buttons */
 
-function moveViewerImage(target){
-const src = currentImages[currentIndex]
-fetch('/api/move',{
-method:'POST',
-headers:{'Content-Type':'application/json'},
-body:JSON.stringify({image:src.startsWith('/')?src.slice(1):src, target})
-}).then(r=>{
-if(r.ok){
-currentImages.splice(currentIndex, 1)
-if(currentImages.length===0){
-closeViewer()
-}
-else if(currentIndex>=currentImages.length) currentIndex--
-if(currentImages.length>0) showImage(currentIndex)
-renderImages(currentImages)
-loadCounts()
-}
-})
-}
+/* folder button click handlers - handled by updateViewerFolderButtons() and updateSlideshowFolderButtons() */
 
-document.getElementById('viewerGood').onclick=e=>{
-e.stopPropagation()
-let target = 'good'
-if(currentFolder==='good') target='regular'
-else if(currentFolder==='bad') target='good'
-moveViewerImage(target)
-}
-
-document.getElementById('viewerBad').onclick=e=>{
-e.stopPropagation()
-let target = 'bad'
-if(currentFolder==='bad') target='regular'
-else if(currentFolder==='good') target='bad'
-moveViewerImage(target)
-}
-
-document.getElementById('viewerRemove').onclick=e=>{
-e.stopPropagation()
-moveViewerImage('regular')
-}
-
-/* slideshow G/B buttons */
-
-function moveSlideshowImage(target){
-const src = currentImages[slideIndex]
-if(!src) return
-disableAutoAdvance()
-fetch('/api/move',{
-method:'POST',
-headers:{'Content-Type':'application/json'},
-body:JSON.stringify({image:src.split('/').pop(), target})
-}).then(r=>{
-if(r.ok){
-currentImages.splice(slideIndex, 1)
-if(currentImages.length===0){ document.getElementById('slideshow').style.display='none'; return }
-renderImages(currentImages)
+function nextImageOrAutoAdvance(){
 // Advance in proper direction: forward stays at same index (shows next image), backward goes to previous
 let nextIndex = slideIndex
 if(slideshowDirection === -1 && slideIndex > 0) {
@@ -1463,44 +1576,9 @@ nextIndex = currentImages.length - 1
 lastSlideShown = -1 // Force fade transition
 showSlide(nextIndex)
 loadCounts()
-updateSlideshowButtonLabels()
-}
-})
 }
 
-document.querySelectorAll('.slide .overlay-good').forEach(btn=>{
-btn.onclick=e=>{
-e.stopPropagation()
-moveSlideshowImage(currentFolder==='good'?'regular':'good')
-}
-})
-
-document.querySelectorAll('.slide .overlay-bad').forEach(btn=>{
-btn.onclick=e=>{
-e.stopPropagation()
-moveSlideshowImage(currentFolder==='bad'?'regular':'bad')
-}
-})
-
-/* slideshow controls bar buttons */
-
-document.getElementById('slideshowGood').onclick=e=>{
-e.stopPropagation()
-resetControlsHideTimer()
-moveSlideshowImage(currentFolder==='good'?'regular':'good')
-}
-
-document.getElementById('slideshowBad').onclick=e=>{
-e.stopPropagation()
-resetControlsHideTimer()
-moveSlideshowImage(currentFolder==='bad'?'regular':'bad')
-}
-
-document.getElementById('slideshowRemove').onclick=e=>{
-e.stopPropagation()
-resetControlsHideTimer()
-moveSlideshowImage('regular')
-}
+/* slideshow controls bar buttons - handled by updateSlideshowFolderButtons() */
 
 /* meow settings */
 
@@ -1692,7 +1770,8 @@ document.getElementById('fadeNum').value = fadeDuration
 document.documentElement.style.setProperty('--fade-duration', fadeDuration + 's')
 }
 
-loadImages('all')
+loadFolderButtons()
+loadImages('root')
 
 </script>
 

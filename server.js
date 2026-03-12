@@ -3,11 +3,21 @@ const fs = require('fs');
 const path = require('path');
 const url = require('url');
 
-const GOOD_DIR = path.join(__dirname, 'good');
-const BAD_DIR = path.join(__dirname, 'bad');
 const MAIN_DIR = __dirname;
 
-// Ensure folders exist
+// Get all subfolders
+function getSubfolders() {
+    return fs.readdirSync(MAIN_DIR)
+        .filter(f => {
+            const full = path.join(MAIN_DIR, f);
+            return fs.statSync(full).isDirectory() && !f.startsWith('.');
+        })
+        .sort();
+}
+
+// Ensure common folders exist
+const GOOD_DIR = path.join(__dirname, 'good');
+const BAD_DIR = path.join(__dirname, 'bad');
 if (!fs.existsSync(GOOD_DIR)) fs.mkdirSync(GOOD_DIR, { recursive: true });
 if (!fs.existsSync(BAD_DIR)) fs.mkdirSync(BAD_DIR, { recursive: true });
 
@@ -57,12 +67,26 @@ const server = http.createServer((req, res) => {
             res.end(data);
         });
     }
+    // API: list folders
+    else if (pathname === '/api/folders') {
+        const folders = getSubfolders();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(folders));
+    }
     // API: list images
     else if (pathname === '/api/list') {
         let folder;
-        if(parsed.query.folder==='good') folder = GOOD_DIR;
-        else if(parsed.query.folder==='bad') folder = BAD_DIR;
-        else folder = MAIN_DIR;
+        const folderParam = parsed.query.folder;
+        
+        if(folderParam === 'root' || !folderParam) {
+            folder = MAIN_DIR;
+        } else {
+            folder = path.join(MAIN_DIR, folderParam);
+        }
+        
+        if (!fs.existsSync(folder)) {
+            return res.writeHead(404).end('Folder not found');
+        }
 
         fs.readdir(folder, (err, files) => {
             if (err) return res.writeHead(500).end('Error reading folder');
@@ -80,16 +104,17 @@ const server = http.createServer((req, res) => {
             });
 
             res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify(images.map(f=>`/${parsed.query.folder==='good'?'good/':parsed.query.folder==='bad'?'bad/':''}${f}`)));
+            const prefix = folderParam && folderParam !== 'root' ? `${folderParam}/` : '';
+            res.end(JSON.stringify(images.map(f=>`/${prefix}${f}`)));
         });
     }
     // API: image counts
     else if (pathname === '/api/counts') {
-        const counts = {
-            all: countImages(MAIN_DIR),
-            good: countImages(GOOD_DIR),
-            bad: countImages(BAD_DIR)
-        };
+        const folders = getSubfolders();
+        const counts = { root: countImages(MAIN_DIR) };
+        folders.forEach(folder => {
+            counts[folder] = countImages(path.join(MAIN_DIR, folder));
+        });
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(counts));
     }
@@ -101,9 +126,16 @@ const server = http.createServer((req, res) => {
             try{
                 const { image, target } = JSON.parse(body);
                 let destFolder;
-                if(target==='good') destFolder = GOOD_DIR;
-                else if(target==='bad') destFolder = BAD_DIR;
-                else destFolder = MAIN_DIR;
+                
+                if(target === 'root') {
+                    destFolder = MAIN_DIR;
+                } else {
+                    destFolder = path.join(MAIN_DIR, target);
+                    // Ensure target folder exists
+                    if (!fs.existsSync(destFolder)) {
+                        fs.mkdirSync(destFolder, { recursive: true });
+                    }
+                }
 
                 const srcPath = path.join(__dirname, image.startsWith('/')? image.slice(1) : image);
                 const destPath = path.join(destFolder, path.basename(image));
