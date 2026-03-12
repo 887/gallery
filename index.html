@@ -43,6 +43,23 @@ button.folder-btn:hover{
 background:rgba(255,255,255,0.4);
 }
 
+header.hidden{
+opacity:0;
+pointer-events:none;
+transition:opacity 0.3s ease;
+}
+
+#meowControl.hidden{
+opacity:0;
+pointer-events:none;
+transition:opacity 0.3s ease;
+}
+
+.overlay-btn.hidden{
+opacity:0;
+pointer-events:none;
+}
+
 /* slideshow button */
 
 #slideshowBtn{
@@ -92,6 +109,12 @@ overflow-y:auto;
 
 #meowSettings.open{
 display:block;
+}
+
+#meowSettings.hidden{
+opacity:0;
+pointer-events:none;
+transition:opacity 0.3s ease;
 }
 
 .meow-setting-row{
@@ -536,12 +559,12 @@ font-size:12px;
 <input class="num-spin" type="number" id="meowPosN" min="0" max="100" step="1" value="20">
 </div>
 <div class="meow-setting-row">
-<label>Spawn H spread (px)</label>
-<input class="num-spin" type="number" id="meowHeightN" min="0" max="400" step="5" value="15">
+<label>Spawn H spread (%)</label>
+<input class="num-spin" type="number" id="meowHeightN" min="0" max="50" step="1" value="10">
 </div>
 <div class="meow-setting-row">
-<label>Spawn W spread (px)</label>
-<input class="num-spin" type="number" id="meowWidthN" min="0" max="800" step="10" value="1900">
+<label>Spawn W spread (%)</label>
+<input class="num-spin" type="number" id="meowWidthN" min="0" max="100" step="1" value="50">
 </div>
 <div class="meow-setting-row">
 <label>Random tilt (±deg)</label>
@@ -678,6 +701,7 @@ let currentImages=[]
 let currentIndex=0
 let currentFolder='root'
 let allFolders=[]
+let headerButtonsHideTimer=null
 
 /* folder button logic */
 
@@ -1022,7 +1046,15 @@ btn.classList.add('hidden')
 }
 
 document.getElementById('slideshow').addEventListener('mousemove', resetControlsHideTimer)
-document.getElementById('slideshow').addEventListener('wheel', resetControlsHideTimer)
+document.getElementById('slideshow').addEventListener('click', resetControlsHideTimer)
+document.getElementById('slideshow').addEventListener('wheel', (e) => {
+// Only reset timer if slideshow is actually visible (not during internal auto-scroll)
+const slideshow = document.getElementById('slideshow')
+if(slideshow && slideshow.style.display === 'block') {
+resetControlsHideTimer()
+}
+// Don't prevent default - let scroll through
+})
 
 /* slideshow overlay buttons hide with controls */
 
@@ -1039,21 +1071,32 @@ let viewerButtonsHideTimer = null
 function resetViewerButtonsHideTimer(){
 clearTimeout(viewerButtonsHideTimer)
 const viewerControls = document.getElementById('viewerControls')
+const meowControl = document.getElementById('meowControl')
 viewerControls.classList.remove('hidden')
-document.getElementById('meowControl').classList.remove('hidden')
+meowControl.classList.remove('hidden')
 document.querySelectorAll('#viewer .nav-btn').forEach(btn => btn.classList.remove('hidden'))
 viewerButtonsHideTimer = setTimeout(() => {
 const viewer = document.getElementById('viewer')
 if(viewer.style.display === 'flex'){
 viewerControls.classList.add('hidden')
-document.getElementById('meowControl').classList.add('hidden')
+meowControl.classList.add('hidden')
 document.querySelectorAll('#viewer .nav-btn').forEach(btn => btn.classList.add('hidden'))
 }
 }, 2000)
 }
 
-document.getElementById('viewer').addEventListener('mousemove', resetViewerButtonsHideTimer)
-document.getElementById('viewer').addEventListener('wheel', resetViewerButtonsHideTimer)
+let middleMouseDown = false
+document.getElementById('viewer').addEventListener('mousedown', (e) => {
+if(e.button === 1) middleMouseDown = true  // 1 = middle mouse button
+})
+document.getElementById('viewer').addEventListener('mouseup', (e) => {
+if(e.button === 1) middleMouseDown = false
+})
+document.getElementById('viewer').addEventListener('mousemove', () => {
+// Only reset timer on mousemove if middle mouse button is NOT down
+if(!middleMouseDown) resetViewerButtonsHideTimer()
+})
+document.getElementById('viewer').addEventListener('click', resetViewerButtonsHideTimer)
 
 /* scroll position tracking for gallery to fullscreen */
 
@@ -1605,8 +1648,8 @@ let meowSlideDuration = 1
 let meowFadeDuration = 10
 let meowDirection = 1
 let meowPosition = 20
-let meowSpawnHeight = 15
-let meowSpawnWidth = 1900
+let meowSpawnHeight = 10
+let meowSpawnWidth = 50
 let meowTilt = 12
 
 meowSettingsBtn.addEventListener('click', () => {
@@ -1636,8 +1679,8 @@ meowSlideDuration = parseFloat(meowSlideN.value)||1
 meowFadeDuration = parseFloat(meowFadeN.value)||10
 meowDirection = parseInt(meowDirSel.value)||1
 meowPosition = parseInt(meowPosN.value)||20
-meowSpawnHeight = parseInt(meowHeightN.value)||15
-meowSpawnWidth = parseInt(meowWidthN.value)||1900
+meowSpawnHeight = parseInt(meowHeightN.value)||10
+meowSpawnWidth = parseInt(meowWidthN.value)||50
 meowTilt = parseInt(meowTiltN.value)||12
 saveMeowSettings()
 })
@@ -1664,8 +1707,8 @@ const s = JSON.parse(decodeURIComponent(val))
 meowFrequency = s.frequency||1; meowCount = s.count||1; meowDelayMs = s.delayMs||0
 meowSlideDuration = s.slideDuration||1; meowFadeDuration = s.fadeDuration||10
 meowDirection = s.direction||1; meowPosition = s.position||20
-meowSpawnHeight = s.spawnHeight!==undefined ? s.spawnHeight : 15
-meowSpawnWidth = s.spawnWidth!==undefined ? s.spawnWidth : 1900
+meowSpawnHeight = s.spawnHeight!==undefined ? s.spawnHeight : 10
+meowSpawnWidth = s.spawnWidth!==undefined ? s.spawnWidth : 50
 meowTilt = s.tilt||12
 meowFreqN.value = meowFrequency; meowCountN.value = meowCount; meowDelayN.value = meowDelayMs
 meowSlideN.value = meowSlideDuration; meowFadeN.value = meowFadeDuration
@@ -1694,9 +1737,9 @@ if(textList.length === 0) return
 
 // Spawn multiple meows
 for(let n = 0; n < meowCount; n++){
-// Calculate randomness upfront so each meow gets unique values
-const offsetY = Math.random() * meowSpawnHeight - meowSpawnHeight / 2
-const offsetX = Math.random() * meowSpawnWidth - meowSpawnWidth / 2
+// Calculate randomness upfront so each meow gets unique values - convert percentage to pixels
+const offsetY = (Math.random() * meowSpawnHeight - meowSpawnHeight / 2) / 100 * window.innerHeight
+const offsetX = (Math.random() * meowSpawnWidth - meowSpawnWidth / 2) / 100 * window.innerWidth
 const tiltDeg = meowTilt > 0 ? (Math.random() * 2 - 1) * meowTilt : 0
 const dirRandom = Math.random() > 0.5 ? 100 : -100
 
@@ -1772,6 +1815,42 @@ document.documentElement.style.setProperty('--fade-duration', fadeDuration + 's'
 
 loadFolderButtons()
 loadImages('root')
+
+/* gallery button fade out after 2 seconds of no mouse movement */
+
+function resetHeaderButtonsHideTimer(){
+clearTimeout(headerButtonsHideTimer)
+const header = document.querySelector('header')
+const meowControl = document.getElementById('meowControl')
+const overlayBtns = document.querySelectorAll('.overlay-btn')
+const meowSettings = document.getElementById('meowSettings')
+header.classList.remove('hidden')
+meowControl.classList.remove('hidden')
+meowSettings.classList.remove('hidden')
+overlayBtns.forEach(btn => btn.classList.remove('hidden'))
+headerButtonsHideTimer = setTimeout(() => {
+const gallery = document.getElementById('gallery')
+if(gallery && gallery.offsetParent !== null) { // Only hide if gallery is visible
+header.classList.add('hidden')
+meowControl.classList.add('hidden')
+meowSettings.classList.add('hidden')
+overlayBtns.forEach(btn => btn.classList.add('hidden'))
+}
+}, 2000)
+}
+
+document.getElementById('gallery').addEventListener('mousemove', resetHeaderButtonsHideTimer)
+document.getElementById('gallery').addEventListener('click', resetHeaderButtonsHideTimer)
+document.getElementById('gallery').addEventListener('wheel', () => {
+// Only reset timer if gallery is visible (not in slideshow/viewer)
+const gallery = document.getElementById('gallery')
+if(gallery && gallery.offsetParent !== null) {
+resetHeaderButtonsHideTimer()
+}
+})
+
+// Show buttons on page load
+resetHeaderButtonsHideTimer()
 
 </script>
 
