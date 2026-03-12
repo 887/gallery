@@ -5,6 +5,65 @@ const url = require('url');
 
 const MAIN_DIR = __dirname;
 
+// === PNG tEXt/iTXt chunk reader ===
+function readPngTextChunks(filePath) {
+    try {
+        const fileSize = fs.statSync(filePath).size;
+        if (fileSize < 8) return {};
+        const fd = fs.openSync(filePath, 'r');
+        const sig = Buffer.alloc(8);
+        fs.readSync(fd, sig, 0, 8, 0);
+        if (sig[0] !== 0x89 || sig[1] !== 0x50 || sig[2] !== 0x4E || sig[3] !== 0x47) {
+            fs.closeSync(fd); return {};
+        }
+        const result = {};
+        let offset = 8;
+        while (offset + 12 <= fileSize) {
+            const hdr = Buffer.alloc(8);
+            if (fs.readSync(fd, hdr, 0, 8, offset) < 8) break;
+            const chunkLen = hdr.readUInt32BE(0);
+            const chunkType = hdr.slice(4, 8).toString('ascii');
+            if (chunkType === 'IEND') break;
+            if ((chunkType === 'tEXt' || chunkType === 'iTXt') && chunkLen > 0 && chunkLen < 10*1024*1024) {
+                const data = Buffer.alloc(chunkLen);
+                fs.readSync(fd, data, 0, chunkLen, offset + 8);
+                const nul = data.indexOf(0);
+                if (nul > 0) {
+                    const kw = data.slice(0, nul).toString('latin1');
+                    if (chunkType === 'tEXt') {
+                        result[kw] = data.slice(nul + 1).toString('latin1');
+                    } else {
+                        let pos = nul + 3;
+                        const l1 = data.indexOf(0, pos);
+                        if (l1 < 0) { offset += 12 + chunkLen; continue; }
+                        const l2 = data.indexOf(0, l1 + 1);
+                        if (l2 < 0) { offset += 12 + chunkLen; continue; }
+                        result[kw] = data.slice(l2 + 1).toString('utf8');
+                    }
+                }
+            }
+            offset += 12 + chunkLen;
+        }
+        fs.closeSync(fd);
+        return result;
+    } catch(e) { return {}; }
+}
+
+// Server-side metadata cache: filepath -> { mtime, meta }
+const serverMetaCache = new Map();
+function getFileMeta(filePath) {
+    try {
+        if (!fs.existsSync(filePath)) { serverMetaCache.delete(filePath); return {}; }
+        const mtime = fs.statSync(filePath).mtimeMs;
+        const cached = serverMetaCache.get(filePath);
+        if (cached && cached.mtime === mtime) return cached.meta;
+        const ext = path.extname(filePath).toLowerCase();
+        const meta = ext === '.png' ? readPngTextChunks(filePath) : {};
+        serverMetaCache.set(filePath, { mtime, meta });
+        return meta;
+    } catch(e) { return {}; }
+}
+
 // Get all subfolders
 function getSubfolders() {
     return fs.readdirSync(MAIN_DIR)
@@ -67,6 +126,25 @@ const server = http.createServer((req, res) => {
             res.end(data);
         });
     }
+    // API: image metadata (reads PNG tEXt chunks)
+    else if (pathname === '/api/meta') {
+        const imgParam = parsed.query.image;
+        if (!imgParam) return res.writeHead(400).end('Missing image param');
+        const cleanPath = imgParam.startsWith('/') ? imgParam.slice(1) : imgParam;
+        const fullPath = path.resolve(path.join(MAIN_DIR, cleanPath));
+        if (!fullPath.startsWith(MAIN_DIR)) return res.writeHead(403).end('Forbidden');
+        if (!fs.existsSync(fullPath)) return res.writeHead(404).end('Not found');
+        const stat = fs.statSync(fullPath);
+        const meta = getFileMeta(fullPath);
+        const result = {
+            filename: path.basename(fullPath),
+            size_kb: Math.round(stat.size / 1024),
+            modified: stat.mtime,
+            ...meta
+        };
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(result));
+    }
     // API: list folders
     else if (pathname === '/api/folders') {
         const folders = getSubfolders();
@@ -102,6 +180,21 @@ const server = http.createServer((req, res) => {
                 const bTime = fs.statSync(path.join(folder,b)).mtime.getTime();
                 return bTime - aTime;
             });
+
+            // Server-side filter: only search positive_prompt inside user_metadata
+            const filterText = (parsed.query.filter || '').toLowerCase().trim();
+            if (filterText) {
+                images = images.filter(f => {
+                    const meta = getFileMeta(path.join(folder, f));
+                    const umRaw = meta['user_metadata'] || meta['user metadata'] || '';
+                    try {
+                        const um = JSON.parse(umRaw);
+                        return String(um.positive_prompt || '').toLowerCase().includes(filterText);
+                    } catch(e) {
+                        return false;
+                    }
+                });
+            }
 
             res.writeHead(200, { 'Content-Type': 'application/json' });
             const prefix = folderParam && folderParam !== 'root' ? `${folderParam}/` : '';

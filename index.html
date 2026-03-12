@@ -42,8 +42,89 @@ border-radius:6px;
 button.folder-btn:hover{
 background:rgba(255,255,255,0.4);
 }
+header.hidden{opacity:0;pointer-events:none;transition:opacity 0.5s;}
 
-header.hidden{
+/* filter input */
+.filter-input{
+background:rgba(255,255,255,0.1);
+border:1px solid rgba(255,255,255,0.3);
+color:white;
+border-radius:6px;
+padding:4px 10px;
+font-size:13px;
+width:150px;
+outline:none;
+}
+.filter-input::placeholder{color:rgba(255,255,255,0.4);}
+.filter-input:focus{border-color:rgba(255,255,255,0.6);}
+
+/* gallery image info button (top-left) */
+.gallery-info-btn{
+position:absolute;
+top:5px;
+left:5px;
+background:rgba(255,255,255,0.25);
+color:white;
+border:none;
+border-radius:3px;
+padding:2px 6px;
+font-size:12px;
+cursor:pointer;
+z-index:100;
+opacity:0.85;
+transition:opacity 0.3s ease;
+}
+.gallery-info-btn:hover{opacity:1;}
+.gallery-info-btn.hidden{opacity:0;pointer-events:none;}
+
+/* info panel */
+#infoPanel{
+position:fixed;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+background:rgba(10,10,10,0.95);
+color:white;
+padding:16px;
+border-radius:8px;
+border:1px solid rgba(255,255,255,0.25);
+z-index:10000;
+width:min(640px,90vw);
+max-height:80vh;
+overflow-y:auto;
+display:none;
+font-size:13px;
+}
+#infoPanel.open{display:block;}
+.info-panel-header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:12px;
+padding-bottom:8px;
+border-bottom:1px solid rgba(255,255,255,0.2);
+font-weight:bold;
+font-size:14px;
+}
+.info-field{margin:8px 0;}
+.info-field-label{
+font-size:10px;
+color:rgba(255,255,255,0.5);
+text-transform:uppercase;
+letter-spacing:0.05em;
+margin-bottom:3px;
+}
+.info-field-value{
+background:rgba(255,255,255,0.06);
+padding:6px 8px;
+border-radius:4px;
+white-space:pre-wrap;
+word-break:break-word;
+font-family:monospace;
+font-size:11px;
+max-height:220px;
+overflow-y:auto;
+}
 opacity:0;
 pointer-events:none;
 transition:opacity 0.3s ease;
@@ -80,12 +161,10 @@ padding:6px 10px;
 border-radius:6px;
 display:flex;
 gap:5px;
-align-items:center;
+align-items:flex-start;
 transition:opacity 0.3s ease;
 opacity:1;
 }
-
-
 
 #meowControl.hidden{
 opacity:0;
@@ -93,10 +172,9 @@ pointer-events:none;
 }
 
 #meowSettings{
-position:fixed;
-top:50px;
-left:10px;
-z-index:9999;
+position:absolute;
+top:40px;
+left:0;
 background:rgba(0,0,0,.8);
 padding:10px;
 border-radius:6px;
@@ -105,16 +183,11 @@ display:none;
 min-width:250px;
 max-height:400px;
 overflow-y:auto;
+z-index:1000;
 }
 
 #meowSettings.open{
 display:block;
-}
-
-#meowSettings.hidden{
-opacity:0;
-pointer-events:none;
-transition:opacity 0.3s ease;
 }
 
 .meow-setting-row{
@@ -522,8 +595,6 @@ font-size:12px;
 <div id="meowControl">
 <label><input type="checkbox" id="meowToggle"> Meow Mode</label>
 <button id="meowSettingsBtn">⚙️</button>
-</div>
-
 <div id="meowSettings">
 <div class="meow-setting-row">
 <label>Frequency (/s)</label>
@@ -575,6 +646,7 @@ font-size:12px;
 <input type="text" id="meowTexts" placeholder="MEOW!,MEOW!!,MEOW !" value="MEOW!,MEOW !!,MEOW !">
 </div>
 </div>
+</div>
 
 <header>
 
@@ -583,6 +655,8 @@ font-size:12px;
 <button class="folder-btn" onclick="shuffleCurrent()">Shuffle</button>
 
 <button class="folder-btn" id="slideshowBtn" onclick="startSlideshow()">Slideshow</button>
+
+<input type="text" id="filterInput" class="filter-input" placeholder="filter prompts…">
 
 </header>
 
@@ -618,6 +692,8 @@ font-size:12px;
 <span id="viewerCounterDisplay">1/0</span>
 </div>
 
+<button onclick="showInfoPanel(currentImages[currentIndex])" title="Image info" class="control-btn">ℹ</button>
+
 <button id="viewerBad" class="control-btn control-btn-small" style="display:none;">B</button>
 <button id="viewerRemove" class="control-btn control-btn-small" style="display:none;">R</button>
 <button id="viewerGood" class="control-btn control-btn-small" style="display:none;">G</button>
@@ -652,6 +728,7 @@ font-size:12px;
 <button id="slideshowDirectionBtn" onclick="resetControlsHideTimer(); togglePlayDirection()" title="Play Forward" class="control-btn">⏩</button>
 <button onclick="resetControlsHideTimer(); togglePlay()" title="Play/Pause" class="control-btn">⏯</button>
 <button onclick="closeSlideshowAndReset()" title="Close" class="control-btn">✕</button>
+<button onclick="resetControlsHideTimer(); showInfoPanel(currentImages[slideIndex])" title="Image info" class="control-btn">ℹ</button>
 
 <div class="speed-control">
 <label class="speed-label">img/s:</label>
@@ -681,6 +758,15 @@ font-size:12px;
 
 </div>
 
+<!-- info panel -->
+<div id="infoPanel">
+<div class="info-panel-header">
+<span>📋 Image Info</span>
+<button onclick="closeInfoPanel()" class="control-btn">✕</button>
+</div>
+<div id="infoPanelContent"></div>
+</div>
+
 <script>
 
 /* core variables */
@@ -698,12 +784,94 @@ let autoAdvanceDisabled=false
 let autoAdvanceTimeout=null
 
 let currentImages=[]
+let allImages=[]
+let galleryFilter=''
 let currentIndex=0
 let currentFolder='root'
 let allFolders=[]
 let headerButtonsHideTimer=null
 
-/* folder button logic */
+/* ======  URL hash persistence  ====== */
+
+function updateUrlHash(){
+const parts=[]
+if(currentFolder!=='root') parts.push('path='+encodeURIComponent(currentFolder))
+if(galleryFilter) parts.push('filter='+encodeURIComponent(galleryFilter))
+history.replaceState(null,'',location.pathname+(parts.length?'#'+parts.join('&'):''))
+}
+
+function readUrlHash(){
+const hash=location.hash.replace(/^#/,'')
+const params={}
+hash.split('&').forEach(p=>{
+const eq=p.indexOf('=')
+if(eq>0) params[decodeURIComponent(p.slice(0,eq))]=decodeURIComponent(p.slice(eq+1))
+})
+return {folder:params.path||'root', filter:params.filter||''}
+}
+
+/* ======  filter  ====== */
+
+function applyFilter(text, skipHash){
+galleryFilter=text
+if(!skipHash) updateUrlHash()
+if(!text.trim()){
+currentImages=[...allImages]
+renderImages()
+return
+}
+fetch(`/api/list?folder=${currentFolder}&filter=${encodeURIComponent(text)}`)
+.then(r=>r.json())
+.then(filtered=>{
+currentImages=filtered
+renderImages()
+})
+}
+
+/* ======  info panel  ====== */
+
+function showInfoPanel(src){
+if(!src) return
+const panel=document.getElementById('infoPanel')
+const content=document.getElementById('infoPanelContent')
+content.innerHTML='<div style="color:rgba(255,255,255,0.45);padding:8px">Loading\u2026</div>'
+panel.classList.add('open')
+fetch(`/api/meta?image=${encodeURIComponent(src)}`)
+.then(r=>r.json())
+.then(meta=>{
+content.innerHTML=''
+// preferred key order
+const order=['user_metadata','filename','size_kb','modified','prompt','workflow','parameters']
+const keys=[...new Set([...order.filter(k=>meta[k]!=null),...Object.keys(meta)])]
+keys.forEach(key=>{
+const val=meta[key]
+if(val==null) return
+const field=document.createElement('div')
+field.className='info-field'
+const lbl=document.createElement('div')
+lbl.className='info-field-label'
+lbl.textContent=key.replace(/_/g,' ')
+const vd=document.createElement('div')
+vd.className='info-field-value'
+let display=val
+if(key==='size_kb') display=val+' KB'
+else if(key==='modified') display=new Date(val).toLocaleString()
+else if(typeof val==='string'){try{display=JSON.stringify(JSON.parse(val),null,2)}catch(e){}}
+else display=String(val)
+vd.textContent=display
+field.appendChild(lbl)
+field.appendChild(vd)
+content.appendChild(field)
+})
+})
+.catch(()=>{
+content.innerHTML='<div style="color:rgba(255,100,100,0.8);padding:8px">No metadata found</div>'
+})
+}
+
+function closeInfoPanel(){document.getElementById('infoPanel').classList.remove('open')}
+
+/* ======  folder button logic  ====== */
 
 function generateSmartAbbreviation(folderName, otherFolders) {
     const allNames = [folderName, ...otherFolders];
@@ -1224,7 +1392,10 @@ if(slideshow.style.display !== 'block') return
 
 if(e.key === 'ArrowRight') showSlide(slideIndex + 1)
 if(e.key === 'ArrowLeft') showSlide(slideIndex - 1)
-if(e.key === 'Escape') closeSlideshowAndReset()
+if(e.key === 'Escape'){
+if(document.getElementById('infoPanel').classList.contains('open')){closeInfoPanel();return}
+closeSlideshowAndReset()
+}
 if(e.key === ' '){
 e.preventDefault()
 togglePlay()
@@ -1329,20 +1500,24 @@ buttonRow.appendChild(btn)
 }
 
 c.appendChild(img)
+
+/* ℹ info button top-left */
+const infoBtn=document.createElement('button')
+infoBtn.className='gallery-info-btn'
+infoBtn.textContent='ℹ'
+infoBtn.title='Image info'
+infoBtn.onclick=e=>{e.stopPropagation();showInfoPanel(src)}
+c.appendChild(infoBtn)
+
 c.appendChild(buttonRow)
 
 return c
 
 }
 
-function renderImages(images){
-
+function renderImages(){
 gallery.innerHTML=''
-
-images.forEach(i=>{
-gallery.appendChild(createImageContainer(i))
-})
-
+currentImages.forEach(src=>gallery.appendChild(createImageContainer(src)))
 }
 
 function updateSlideshowFolderButtons(){
@@ -1487,31 +1662,34 @@ showImage(nextIdx);
 }
 
 function loadImages(folder){
-
 currentFolder = folder === 'root' || folder === 'all' ? 'root' : folder
-
+updateUrlHash()
 fetch(`/api/list?folder=${currentFolder}`)
 .then(r=>r.json())
 .then(images=>{
-currentImages=images
-renderImages(images)
+allImages=images
+if(galleryFilter.trim()){
+applyFilter(galleryFilter,true)
+} else {
+currentImages=[...allImages]
+renderImages()
+}
 loadCounts()
 renderFolderButtons()
 updateSlideshowFolderButtons()
-
-// If viewer is open, update its button visibility for new folder
-if(viewer.style.display==='flex'){
-updateViewerFolderButtons()
-}
+if(viewer.style.display==='flex') updateViewerFolderButtons()
 })
-
 }
 
 function shuffleCurrent(){
-
-currentImages.sort(()=>Math.random()-.5)
-renderImages(currentImages)
-
+allImages.sort(()=>Math.random()-.5)
+if(galleryFilter.trim()){
+const vis=new Set(currentImages)
+currentImages=allImages.filter(s=>vis.has(s))
+} else {
+currentImages=[...allImages]
+}
+renderImages()
 }
 
 function moveGalleryImage(src, target, container){
@@ -1522,9 +1700,10 @@ body:JSON.stringify({image:src.startsWith('/')?src.slice(1):src, target})
 }).then(r=>{
 if(r.ok){
 if(container) container.remove()
+allImages=allImages.filter(i=>i!==src)
 currentImages=currentImages.filter(i=>i!==src)
 loadCounts()
-renderImages(currentImages)
+if(!container) renderImages()
 }
 })}
 
@@ -1589,6 +1768,10 @@ window.scrollTo(0, galleryScrollPosition)
 }
 
 document.addEventListener('keydown', e=>{
+if(e.key==='Escape' && document.getElementById('infoPanel').classList.contains('open')){
+closeInfoPanel()
+return
+}
 if(viewer.style.display==='flex'){
 if(e.key==='ArrowRight' || e.code==='Space') nextImage()
 if(e.key==='ArrowLeft') prevImage()
@@ -1813,8 +1996,29 @@ document.getElementById('fadeNum').value = fadeDuration
 document.documentElement.style.setProperty('--fade-duration', fadeDuration + 's')
 }
 
+/* read URL hash first, then load */
+const _hashState = readUrlHash()
+galleryFilter = _hashState.filter
+if(galleryFilter){
+const fi=document.getElementById('filterInput')
+if(fi) fi.value=galleryFilter
+}
+
 loadFolderButtons()
-loadImages('root')
+loadImages(_hashState.folder)
+
+/* filter input wiring */
+;(()=>{
+const fi=document.getElementById('filterInput')
+let _fd=null
+fi.addEventListener('input',()=>{
+resetHeaderButtonsHideTimer()
+clearTimeout(_fd)
+_fd=setTimeout(()=>applyFilter(fi.value),320)
+})
+fi.addEventListener('keydown',e=>{
+if(e.key==='Escape'){fi.value='';applyFilter('')}
+})})()
 
 /* gallery button fade out after 2 seconds of no mouse movement */
 
@@ -1823,18 +2027,23 @@ clearTimeout(headerButtonsHideTimer)
 const header = document.querySelector('header')
 const meowControl = document.getElementById('meowControl')
 const overlayBtns = document.querySelectorAll('.overlay-btn')
-const meowSettings = document.getElementById('meowSettings')
+const infoBtns = document.querySelectorAll('.gallery-info-btn')
 header.classList.remove('hidden')
 meowControl.classList.remove('hidden')
-meowSettings.classList.remove('hidden')
 overlayBtns.forEach(btn => btn.classList.remove('hidden'))
+infoBtns.forEach(btn => btn.classList.remove('hidden'))
+const viewer = document.getElementById('viewer')
+const slideshow = document.getElementById('slideshow')
+const inFullscreen = viewer.style.display === 'flex' || slideshow.style.display === 'block'
 headerButtonsHideTimer = setTimeout(() => {
-const gallery = document.getElementById('gallery')
-if(gallery && gallery.offsetParent !== null) { // Only hide if gallery is visible
+const scrollY = window.scrollY || document.documentElement.scrollTop
+// Overlay buttons ALWAYS hide after 2 seconds (in any mode)
+overlayBtns.forEach(btn => btn.classList.add('hidden'))
+infoBtns.forEach(btn => btn.classList.add('hidden'))
+// Header buttons: hide if in fullscreen OR if scrolled down in gallery (scrollY > 0)
+if(inFullscreen || scrollY > 0){
 header.classList.add('hidden')
 meowControl.classList.add('hidden')
-meowSettings.classList.add('hidden')
-overlayBtns.forEach(btn => btn.classList.add('hidden'))
 }
 }, 2000)
 }
