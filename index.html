@@ -1693,6 +1693,22 @@ renderImages()
 }
 
 function moveGalleryImage(src, target, container){
+// Cancel active fade animations in slideshow before moving image
+const slideshow = document.getElementById('slideshow')
+if(slideshow && slideshow.style.display === 'block'){
+// Force-cancel any active CSS transitions by temporarily removing active class
+const slideA = document.getElementById('slideA')
+const slideB = document.getElementById('slideB')
+const active = slideA.classList.contains('active') ? slideA : slideB
+// Remove transition temporarily to cancel animation
+active.style.transition = 'none'
+active.classList.remove('active')
+// Force reflow to ensure transition cancellation
+void active.offsetHeight
+// Restore transition for next fade
+active.style.transition = `opacity var(--fade-duration, 1.5s)`
+}
+
 fetch('/api/move',{
 method:'POST',
 headers:{'Content-Type':'application/json'},
@@ -1704,6 +1720,14 @@ allImages=allImages.filter(i=>i!==src)
 currentImages=currentImages.filter(i=>i!==src)
 loadCounts()
 if(!container) renderImages()
+// If in slideshow, advance to next image if current was removed
+if(slideshow && slideshow.style.display === 'block' && currentImages.length > 0){
+// Reset to valid slide index
+if(slideIndex >= currentImages.length) slideIndex = currentImages.length - 1
+if(slideIndex < 0) slideIndex = 0
+lastSlideShown = -1 // Force refresh
+showSlide(slideIndex)
+}
 }
 })}
 
