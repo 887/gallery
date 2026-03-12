@@ -753,6 +753,7 @@ let lastMiddleClick = 0
 let autoscrollActive = false
 let lastImageIndex = -1
 let lastSlideshowIndex = -1
+let ignoreScrollEvents = false
 
 // Detect middle mouse down for Firefox autoscroll
 document.addEventListener('mousedown', e => {
@@ -817,7 +818,7 @@ return
 }
 
 // Viewer mode - use proportional scroll mapping
-if(viewer.style.display !== 'flex' || currentImages.length === 0) return
+if(viewer.style.display !== 'flex' || currentImages.length === 0 || ignoreScrollEvents) return
 
 const scrollY = window.scrollY || document.documentElement.scrollTop
 const documentHeight = document.documentElement.scrollHeight
@@ -891,6 +892,10 @@ galleryScrollPosition = window.scrollY || document.documentElement.scrollTop
 currentIndex=currentImages.indexOf(src)
 lastImageIndex = currentIndex  // Prevent scroll events from overriding
 
+// Disable scroll-based image updates briefly
+ignoreScrollEvents = true
+setTimeout(() => { ignoreScrollEvents = false }, 200)
+
 // Show viewer and image
 viewer.style.display='flex'
 document.querySelector('header').style.display='none'
@@ -905,18 +910,24 @@ viewerCounterDisplay.textContent = (currentIndex+1) + '/' + currentImages.length
 
 const g=document.createElement('button')
 g.className='overlay-btn overlay-good'
-g.textContent='G'
+g.textContent=currentFolder==='good' ? 'R' : currentFolder==='bad' ? 'G' : 'G'
 g.onclick=e=>{
 e.stopPropagation()
-moveGalleryImage(src, currentFolder==='good'?'regular':'good', c)
+let target = 'good'
+if(currentFolder==='good') target='regular'
+else if(currentFolder==='bad') target='good'
+moveGalleryImage(src, target, c)
 }
 
 const b=document.createElement('button')
 b.className='overlay-btn overlay-bad'
-b.textContent='B'
+b.textContent=currentFolder==='bad' ? 'R' : currentFolder==='good' ? 'B' : 'B'
 b.onclick=e=>{
 e.stopPropagation()
-moveGalleryImage(src, currentFolder==='bad'?'regular':'bad', c)
+let target = 'bad'
+if(currentFolder==='bad') target='regular'
+else if(currentFolder==='good') target='bad'
+moveGalleryImage(src, target, c)
 }
 
 c.appendChild(img)
@@ -937,6 +948,15 @@ gallery.appendChild(createImageContainer(i))
 
 }
 
+function updateSlideshowButtonLabels(){
+document.querySelectorAll('.slide .overlay-good').forEach(btn=>{
+btn.textContent=currentFolder==='good'?'R':currentFolder==='bad'?'G':'G'
+})
+document.querySelectorAll('.slide .overlay-bad').forEach(btn=>{
+btn.textContent=currentFolder==='bad'?'R':currentFolder==='good'?'B':'B'
+})
+}
+
 function loadImages(folder){
 
 currentFolder=folder
@@ -947,6 +967,7 @@ fetch(`/api/list?folder=${folder}`)
 currentImages=images
 renderImages(images)
 loadCounts()
+updateSlideshowButtonLabels()
 })
 
 }
@@ -962,7 +983,7 @@ function moveGalleryImage(src, target, container){
 fetch('/api/move',{
 method:'POST',
 headers:{'Content-Type':'application/json'},
-body:JSON.stringify({image:src.split('/').pop(), target})
+body:JSON.stringify({image:src.startsWith('/')?src.slice(1):src, target})
 }).then(r=>{
 if(r.ok){
 container.remove()
@@ -1036,7 +1057,7 @@ const src = currentImages[currentIndex]
 fetch('/api/move',{
 method:'POST',
 headers:{'Content-Type':'application/json'},
-body:JSON.stringify({image:src.split('/').pop(), target})
+body:JSON.stringify({image:src.startsWith('/')?src.slice(1):src, target})
 }).then(r=>{
 if(r.ok){
 currentImages.splice(currentIndex, 1)
@@ -1055,12 +1076,18 @@ loadCounts()
 
 document.getElementById('viewerGood').onclick=e=>{
 e.stopPropagation()
-moveViewerImage(currentFolder==='good'?'regular':'good')
+let target = 'good'
+if(currentFolder==='good') target='regular'
+else if(currentFolder==='bad') target='good'
+moveViewerImage(target)
 }
 
 document.getElementById('viewerBad').onclick=e=>{
 e.stopPropagation()
-moveViewerImage(currentFolder==='bad'?'regular':'bad')
+let target = 'bad'
+if(currentFolder==='bad') target='regular'
+else if(currentFolder==='good') target='bad'
+moveViewerImage(target)
 }
 
 /* slideshow G/B buttons */
@@ -1078,6 +1105,7 @@ currentImages.splice(slideIndex, 1)
 if(currentImages.length===0){ document.getElementById('slideshow').style.display='none'; return }
 showSlide(slideIndex >= currentImages.length ? 0 : slideIndex)
 loadCounts()
+updateSlideshowButtonLabels()
 }
 })
 }

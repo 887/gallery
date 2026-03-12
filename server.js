@@ -105,7 +105,7 @@ const server = http.createServer((req, res) => {
                 else if(target==='bad') destFolder = BAD_DIR;
                 else destFolder = MAIN_DIR;
 
-                const srcPath = path.join(__dirname, image);
+                const srcPath = path.join(__dirname, image.startsWith('/')? image.slice(1) : image);
                 const destPath = path.join(destFolder, path.basename(image));
 
                 fs.rename(srcPath, destPath, err=>{
