@@ -360,6 +360,9 @@ opacity:0;
 transition:opacity var(--fade-duration, 1.5s);
 z-index:5001;
 pointer-events:none;
+will-change:opacity;
+transform:translateZ(0);
+backface-visibility:hidden;
 }
 
 .slide.active{
@@ -381,6 +384,7 @@ width:100%;
 height:100%;
 display:block;
 object-fit:contain;
+will-change:opacity;
 }
 
 /* slideshow slide buttons - match fullscreen positions */
@@ -911,10 +915,17 @@ function renderFolderButtons() {
 let slidePool = []
 let slidePoolIndex = 0
 
+function isChromiumBasedBrowser(){
+// Check for Chrome/Edge/Brave (Blink/WebKit engines)
+const ua = navigator.userAgent
+return /Chrome|CriOS|Edg|Brave/.test(ua) && !/Firefox|OPR/.test(ua)
+}
+
 function initSlidePool(){
 const container = document.getElementById('slideContainer')
 slidePool = []
-for(let i = 0; i < 50; i++){
+const poolSize = isChromiumBasedBrowser() ? 3 : 15
+for(let i = 0; i < poolSize; i++){
 const slide = document.createElement('div')
 slide.className = 'slide'
 slide.style.opacity = '0'
