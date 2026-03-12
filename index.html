@@ -597,7 +597,7 @@ font-size:12px;
 
 <div id="slideshow">
 
-<button onclick="event.stopPropagation(); showSlide(slideIndex-1)" class="nav-btn left">◀</button>
+<button onclick="event.stopPropagation(); resetControlsHideTimer(); disableAutoAdvance(); showSlide(slideIndex-1)" class="nav-btn left">◀</button>
 
 <div class="slide" id="slideA">
 <div class="slide-image">
@@ -610,13 +610,13 @@ font-size:12px;
 </div>
 </div>
 
-<button onclick="event.stopPropagation(); showSlide(slideIndex+1)" class="nav-btn right">▶</button>
+<button onclick="event.stopPropagation(); resetControlsHideTimer(); disableAutoAdvance(); showSlide(slideIndex+1)" class="nav-btn right">▶</button>
 
 <div id="slideshowControls">
-<button onclick="showSlide(slideIndex-1)" title="Prev" class="control-btn">◀</button>
-<button onclick="showSlide(slideIndex+1)" title="Next" class="control-btn">▶</button>
-<button id="slideshowDirectionBtn" onclick="togglePlayDirection()" title="Play Forward" class="control-btn">⏩</button>
-<button onclick="togglePlay()" title="Play/Pause" class="control-btn">⏯</button>
+<button onclick="event.stopPropagation(); resetControlsHideTimer(); disableAutoAdvance(); showSlide(slideIndex-1)" title="Prev" class="control-btn">◀</button>
+<button onclick="event.stopPropagation(); resetControlsHideTimer(); disableAutoAdvance(); showSlide(slideIndex+1)" title="Next" class="control-btn">▶</button>
+<button id="slideshowDirectionBtn" onclick="resetControlsHideTimer(); togglePlayDirection()" title="Play Forward" class="control-btn">⏩</button>
+<button onclick="resetControlsHideTimer(); togglePlay()" title="Play/Pause" class="control-btn">⏯</button>
 <button onclick="closeSlideshowAndReset()" title="Close" class="control-btn">✕</button>
 
 <div class="speed-control">
@@ -635,8 +635,8 @@ font-size:12px;
 </div>
 
 <div class="control-section" style="margin-left:auto;">
-<button onclick="toggleImageScale()" title="Toggle scale" class="control-btn" style="font-size:14px;">📐</button>
-<button onclick="toggleOriginalSize()" title="Original size" class="control-btn" style="font-size:12px;">100%</button>
+<button onclick="resetControlsHideTimer(); toggleImageScale()" title="Toggle scale" class="control-btn" style="font-size:14px;">📐</button>
+<button onclick="resetControlsHideTimer(); toggleOriginalSize()" title="Original size" class="control-btn" style="font-size:12px;">100%</button>
 
 <div class="control-counter">
 <span id="slideshowCounterDisplay">1/0</span>
@@ -665,6 +665,8 @@ let slideshowTimer=null
 let slideshowDirection=1
 let playing=false
 let slideshowSpeed=0.3
+let autoAdvanceDisabled=false
+let autoAdvanceTimeout=null
 
 let currentImages=[]
 let currentIndex=0
@@ -759,10 +761,17 @@ window.scrollTo(0, scrollY)
 
 /* autoplay */
 
+function disableAutoAdvance(){
+clearTimeout(autoAdvanceTimeout)
+autoAdvanceDisabled=true
+autoAdvanceTimeout=setTimeout(()=>{
+autoAdvanceDisabled=false
+}, 5000)
+}
+
 function playStep(){
-
+if(autoAdvanceDisabled) return
 showSlide(slideIndex+slideshowDirection)
-
 }
 
 function togglePlay(){
@@ -919,6 +928,7 @@ const interval = Math.round(1000 / slideshowSpeed)
 slideshowTimer = setInterval(playStep, interval)
 }
 localStorage.setItem('slideshowSpeed', slideshowSpeed)
+resetControlsHideTimer()
 })
 
 /* fade duration control */
@@ -928,6 +938,7 @@ document.getElementById('fadeNum').addEventListener('input', e=>{
 fadeDuration = parseFloat(e.target.value)||2.0
 document.documentElement.style.setProperty('--fade-duration', fadeDuration + 's')
 localStorage.setItem('slideshowFadeDuration', fadeDuration)
+resetControlsHideTimer()
 })
 
 /* slideshow controls auto-hide after 2 seconds */
@@ -1030,6 +1041,9 @@ clearTimeout(scrollTimeoutId)
 scrollTimeoutId = setTimeout(() => {
 userScrollingInSlideshow = false
 }, 300)
+
+// Disable auto-advance while user is scrolling
+disableAutoAdvance()
 
 const scrollY = window.scrollY || document.documentElement.scrollTop
 const documentHeight = document.documentElement.scrollHeight
@@ -1417,6 +1431,7 @@ moveViewerImage('regular')
 function moveSlideshowImage(target){
 const src = currentImages[slideIndex]
 if(!src) return
+disableAutoAdvance()
 fetch('/api/move',{
 method:'POST',
 headers:{'Content-Type':'application/json'},
@@ -1426,7 +1441,16 @@ if(r.ok){
 currentImages.splice(slideIndex, 1)
 if(currentImages.length===0){ document.getElementById('slideshow').style.display='none'; return }
 renderImages(currentImages)
-showSlide(slideIndex >= currentImages.length ? 0 : slideIndex)
+// Advance in proper direction: forward stays at same index (shows next image), backward goes to previous
+let nextIndex = slideIndex
+if(slideshowDirection === -1 && slideIndex > 0) {
+nextIndex = slideIndex - 1
+}
+if(nextIndex >= currentImages.length) {
+nextIndex = currentImages.length - 1
+}
+lastSlideShown = -1 // Force fade transition
+showSlide(nextIndex)
 loadCounts()
 updateSlideshowButtonLabels()
 }
@@ -1451,16 +1475,19 @@ moveSlideshowImage(currentFolder==='bad'?'regular':'bad')
 
 document.getElementById('slideshowGood').onclick=e=>{
 e.stopPropagation()
+resetControlsHideTimer()
 moveSlideshowImage(currentFolder==='good'?'regular':'good')
 }
 
 document.getElementById('slideshowBad').onclick=e=>{
 e.stopPropagation()
+resetControlsHideTimer()
 moveSlideshowImage(currentFolder==='bad'?'regular':'bad')
 }
 
 document.getElementById('slideshowRemove').onclick=e=>{
 e.stopPropagation()
+resetControlsHideTimer()
 moveSlideshowImage('regular')
 }
 
