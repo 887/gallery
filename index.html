@@ -454,32 +454,32 @@ transform:translateX(-50%) translateY(var(--meow-end-y, 0)) translateX(var(--meo
 </div>
 <div class="meow-setting-row">
 <label>Fade (s)</label>
-<input class="num-spin" type="number" id="meowFadeN" min="0.1" max="30" step="0.1" value="3">
+<input class="num-spin" type="number" id="meowFadeN" min="0.1" max="30" step="0.1" value="10">
 </div>
 <div class="meow-setting-row">
 <label>Direction</label>
 <select id="meowDirSel">
 <option value="0">→ Right</option>
-<option value="1">↑ Up</option>
+<option value="1" selected>↑ Up</option>
 <option value="2">↓ Down</option>
 <option value="3">← Left</option>
 </select>
 </div>
 <div class="meow-setting-row">
 <label>Position V (%)</label>
-<input class="num-spin" type="number" id="meowPosN" min="0" max="100" step="1" value="65">
+<input class="num-spin" type="number" id="meowPosN" min="0" max="100" step="1" value="20">
 </div>
 <div class="meow-setting-row">
 <label>Spawn H spread (px)</label>
-<input class="num-spin" type="number" id="meowHeightN" min="0" max="400" step="5" value="20">
+<input class="num-spin" type="number" id="meowHeightN" min="0" max="400" step="5" value="15">
 </div>
 <div class="meow-setting-row">
 <label>Spawn W spread (px)</label>
-<input class="num-spin" type="number" id="meowWidthN" min="0" max="800" step="10" value="60">
+<input class="num-spin" type="number" id="meowWidthN" min="0" max="800" step="10" value="1900">
 </div>
 <div class="meow-setting-row">
 <label>Random tilt (±deg)</label>
-<input class="num-spin" type="number" id="meowTiltN" min="0" max="45" step="1" value="0">
+<input class="num-spin" type="number" id="meowTiltN" min="0" max="45" step="1" value="12">
 </div>
 <div class="meow-setting-row">
 <label>Meow Texts (CSV):</label>
@@ -1146,12 +1146,12 @@ let meowFrequency = 1
 let meowCount = 1
 let meowDelayMs = 0
 let meowSlideDuration = 1
-let meowFadeDuration = 3
-let meowDirection = 0
-let meowPosition = 65
-let meowSpawnHeight = 20
-let meowSpawnWidth = 60
-let meowTilt = 0
+let meowFadeDuration = 10
+let meowDirection = 1
+let meowPosition = 20
+let meowSpawnHeight = 15
+let meowSpawnWidth = 1900
+let meowTilt = 12
 
 meowSettingsBtn.addEventListener('click', () => {
 meowSettingsPanel.classList.toggle('open')
@@ -1169,12 +1169,12 @@ meowFrequency = parseFloat(meowFreqN.value)||1
 meowCount = parseInt(meowCountN.value)||1
 meowDelayMs = parseInt(meowDelayN.value)||0
 meowSlideDuration = parseFloat(meowSlideN.value)||1
-meowFadeDuration = parseFloat(meowFadeN.value)||3
-meowDirection = parseInt(meowDirSel.value)||0
-meowPosition = parseInt(meowPosN.value)||65
-meowSpawnHeight = parseInt(meowHeightN.value)||0
-meowSpawnWidth = parseInt(meowWidthN.value)||0
-meowTilt = parseInt(meowTiltN.value)||0
+meowFadeDuration = parseFloat(meowFadeN.value)||10
+meowDirection = parseInt(meowDirSel.value)||1
+meowPosition = parseInt(meowPosN.value)||20
+meowSpawnHeight = parseInt(meowHeightN.value)||15
+meowSpawnWidth = parseInt(meowWidthN.value)||1900
+meowTilt = parseInt(meowTiltN.value)||12
 saveMeowSettings()
 })
 })
@@ -1198,11 +1198,11 @@ if(name === 'meowSettings'){
 try{
 const s = JSON.parse(decodeURIComponent(val))
 meowFrequency = s.frequency||1; meowCount = s.count||1; meowDelayMs = s.delayMs||0
-meowSlideDuration = s.slideDuration||1; meowFadeDuration = s.fadeDuration||3
-meowDirection = s.direction||0; meowPosition = s.position||65
-meowSpawnHeight = s.spawnHeight!==undefined ? s.spawnHeight : 20
-meowSpawnWidth = s.spawnWidth!==undefined ? s.spawnWidth : 60
-meowTilt = s.tilt||0
+meowSlideDuration = s.slideDuration||1; meowFadeDuration = s.fadeDuration||10
+meowDirection = s.direction||1; meowPosition = s.position||20
+meowSpawnHeight = s.spawnHeight!==undefined ? s.spawnHeight : 15
+meowSpawnWidth = s.spawnWidth!==undefined ? s.spawnWidth : 1900
+meowTilt = s.tilt||12
 meowFreqN.value = meowFrequency; meowCountN.value = meowCount; meowDelayN.value = meowDelayMs
 meowSlideN.value = meowSlideDuration; meowFadeN.value = meowFadeDuration
 meowDirSel.value = meowDirection; meowPosN.value = meowPosition
