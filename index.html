@@ -6,11 +6,13 @@
 
 <style>
 
+html{height:100%;}
 body{
 background:#111;
 color:white;
 font-family:sans-serif;
 margin:0;
+height:100%;
 }
 
 /* header */
@@ -161,6 +163,12 @@ color:black;
 border-radius:3px;
 cursor:pointer;
 opacity:0.8;
+transition:opacity 0.3s ease;
+}
+
+.overlay-btn.hidden{
+opacity:0;
+pointer-events:none;
 }
 
 .overlay-good{right:5px;}
@@ -181,19 +189,24 @@ justify-content:center;
 
 .viewer-image{
 position:relative;
-display:inline-block;
+display:flex;
+align-items:center;
+justify-content:center;
+width:100%;
+height:100%;
 }
 
 .viewer-image img{
-max-width:95vw;
-max-height:95vh;
+width:100%;
+height:100%;
 display:block;
+object-fit:contain;
 }
 
 /* navigation */
 
 .nav-btn{
-position:absolute;
+position:fixed;
 top:50%;
 transform:translateY(-50%);
 font-size:40px;
@@ -203,6 +216,15 @@ color:white;
 padding:10px 15px;
 cursor:pointer;
 border-radius:5px;
+transition:opacity 0.3s ease;
+opacity:1;
+z-index:5002;
+pointer-events:auto !important;
+}
+
+.nav-btn.hidden{
+opacity:0;
+pointer-events:none !important;
 }
 
 .left{left:20px;}
@@ -244,13 +266,18 @@ pointer-events:auto;
 
 .slide-image{
 position:relative;
-display:inline-block;
+display:flex;
+align-items:center;
+justify-content:center;
+width:100%;
+height:100%;
 }
 
 .slide img{
-max-width:95vw;
-max-height:95vh;
+width:100%;
+height:100%;
 display:block;
+object-fit:contain;
 }
 
 /* slideshow slide buttons - match fullscreen positions */
@@ -262,14 +289,14 @@ display:block;
 
 #slideshowControls{
 position:fixed;
-bottom:20px;
+bottom:1px;
 left:50%;
 transform:translateX(-50%);
 display:flex;
 gap:10px;
 align-items:center;
 z-index:5002;
-background:rgba(0,0,0,0.7);
+background:rgba(0,0,0,0.25);
 padding:10px 20px;
 border-radius:8px;
 transition:opacity 0.3s ease;
@@ -281,39 +308,18 @@ opacity:0;
 pointer-events:none;
 }
 
-#slideshowControls button{
-font-size:14px;
-padding:4px 8px;
-border:none;
-background:rgba(255,255,255,0.3);
-color:white;
-border-radius:3px;
-cursor:pointer;
-opacity:0.8;
+#viewerControls{
+transition:opacity 0.3s ease;
+opacity:1;
+}
+
+#viewerControls.hidden{
+opacity:0 !important;
+pointer-events:none;
 }
 
 #slideshowControls button:hover{
 opacity:1;
-}
-
-#slideshowSpeedControl{
-display:flex;
-gap:8px;
-align-items:center;
-margin-left:10px;
-padding-left:10px;
-border-left:1px solid rgba(255,255,255,0.3);
-}
-
-#speedSlider{
-width:80px;
-cursor:pointer;
-}
-
-#speedValue{
-min-width:50px;
-font-size:12px;
-text-align:right;
 }
 
 #slideshowMode{
@@ -336,37 +342,10 @@ transition:width 0.3s ease;
 z-index:10;
 }
 
-/* scrollbar track on right side */
-
-#scrollbarTrack{
-position:absolute;
-right:0;
-top:0;
-width:12px;
-height:100%;
-background:rgba(255,255,255,0.1);
-z-index:9;
-pointer-events:none;
-}
-
-#scrollbarThumb{
-position:absolute;
-right:0;
-width:12px;
-background:rgba(255,255,255,0.4);
-border-radius:6px;
-z-index:10;
-transition:opacity 0.2s;
-opacity:0.3;
-}
-
-#slideshow:hover #scrollbarThumb{
-opacity:0.7;
-}
-
 /* number inputs */
 
-.num-spin{
+.num-spin,
+.num-input{
 background:rgba(255,255,255,0.1);
 border:1px solid rgba(255,255,255,0.3);
 color:white;
@@ -423,6 +402,82 @@ transform:translateX(-50%) translateY(var(--meow-visible-y, 0)) translateX(var(-
 opacity:0;
 transform:translateX(-50%) translateY(var(--meow-end-y, 0)) translateX(var(--meow-end-x, 0)) rotate(var(--meow-tilt, 0deg));
 }
+}
+
+/* control bar buttons and styling */
+
+.control-btn{
+font-size:14px;
+padding:4px 8px;
+border:none;
+background:rgba(255,255,255,0.3);
+color:white;
+border-radius:3px;
+cursor:pointer;
+opacity:0.8;
+transition:opacity 0.2s ease;
+}
+
+.control-btn:hover{
+opacity:1;
+}
+
+.control-btn-small{
+padding:2px 5px;
+font-size:12px;
+}
+
+.control-section{
+display:flex;
+gap:10px;
+align-items:center;
+padding-left:10px;
+border-left:1px solid rgba(255,255,255,0.3);
+}
+
+.control-counter{
+font-size:12px;
+min-width:50px;
+color:white;
+}
+
+.fade-control{
+display:flex;
+gap:5px;
+align-items:center;
+margin-left:10px;
+padding-left:10px;
+border-left:1px solid rgba(255,255,255,0.3);
+}
+
+.fade-label{
+font-size:12px;
+}
+
+.fade-unit{
+font-size:11px;
+}
+
+.speed-control{
+display:flex;
+gap:8px;
+align-items:center;
+margin-left:10px;
+padding-left:10px;
+border-left:1px solid rgba(255,255,255,0.3);
+}
+
+.speed-label{
+font-size:12px;
+}
+
+.num-input{
+background:rgba(255,255,255,0.1);
+border:1px solid rgba(255,255,255,0.3);
+color:white;
+border-radius:3px;
+padding:2px 4px;
+font-size:12px;
 }
 
 </style>
@@ -504,22 +559,37 @@ transform:translateX(-50%) translateY(var(--meow-end-y, 0)) translateX(var(--meo
 
 <div class="viewer" id="viewer">
 
-<button id="prevBtn" class="nav-btn left">◀</button>
+<button onclick="event.stopPropagation(); prevImage()" class="nav-btn left">◀</button>
 
 <div class="viewer-image">
 
 <img id="full">
 
-<button id="viewerBad" class="overlay-btn overlay-bad">B</button>
-<button id="viewerGood" class="overlay-btn overlay-good">G</button>
-
 </div>
 
-<div id="viewerCounter" style="position:fixed; bottom:20px; right:20px; background:rgba(0,0,0,0.7); padding:10px 15px; border-radius:8px; font-size:14px; z-index:5000;">
+
+
+<button onclick="event.stopPropagation(); nextImage()" class="nav-btn right">▶</button>
+
+<div id="viewerControls" style="position:fixed; bottom:1px; left:50%; transform:translateX(-50%); display:flex; gap:10px; align-items:center; z-index:5002; background:rgba(0,0,0,0.25); padding:10px 20px; border-radius:8px; transition:opacity 0.3s ease; opacity:1;">
+
+<button onclick="prevImage()" title="Prev" class="control-btn">◀</button>
+<button onclick="nextImage()" title="Next" class="control-btn">▶</button>
+
+<div class="control-section" style="margin-left:auto;">
+<button onclick="toggleImageScale()" title="Toggle scale" class="control-btn" style="font-size:11px;">📐</button>
+<button onclick="toggleOriginalSize()" title="Original size" class="control-btn" style="font-size:10px;">100%</button>
+
+<div class="control-counter">
 <span id="viewerCounterDisplay">1/0</span>
 </div>
 
-<button id="nextBtn" class="nav-btn right">▶</button>
+<button id="viewerBad" class="control-btn control-btn-small" style="display:none;">B</button>
+<button id="viewerRemove" class="control-btn control-btn-small" style="display:none;">R</button>
+<button id="viewerGood" class="control-btn control-btn-small" style="display:none;">G</button>
+</div>
+
+</div>
 
 </div>
 
@@ -527,46 +597,54 @@ transform:translateX(-50%) translateY(var(--meow-end-y, 0)) translateX(var(--meo
 
 <div id="slideshow">
 
+<button onclick="event.stopPropagation(); showSlide(slideIndex-1)" class="nav-btn left">◀</button>
+
 <div class="slide" id="slideA">
 <div class="slide-image">
 <img>
-<button class="overlay-btn overlay-bad">B</button>
-<button class="overlay-btn overlay-good">G</button>
 </div>
 </div>
 <div class="slide" id="slideB">
 <div class="slide-image">
 <img>
-<button class="overlay-btn overlay-bad">B</button>
-<button class="overlay-btn overlay-good">G</button>
 </div>
 </div>
+
+<button onclick="event.stopPropagation(); showSlide(slideIndex+1)" class="nav-btn right">▶</button>
 
 <div id="slideshowControls">
-<button onclick="showSlide(slideIndex-1)" title="Prev">◀</button>
-<button onclick="reversePlay()" title="Play Reverse">⏪</button>
-<button onclick="togglePlay()" title="Play/Pause">⏯</button>
-<button onclick="forwardPlay()" title="Play Forward">⏩</button>
-<button onclick="showSlide(slideIndex+1)" title="Next">▶</button>
-<button onclick="closeSlideshowAndReset()" title="Close">✕</button>
+<button onclick="showSlide(slideIndex-1)" title="Prev" class="control-btn">◀</button>
+<button onclick="showSlide(slideIndex+1)" title="Next" class="control-btn">▶</button>
+<button id="slideshowDirectionBtn" onclick="togglePlayDirection()" title="Play Forward" class="control-btn">⏩</button>
+<button onclick="togglePlay()" title="Play/Pause" class="control-btn">⏯</button>
+<button onclick="closeSlideshowAndReset()" title="Close" class="control-btn">✕</button>
 
-<div id="slideshowSpeedControl">
-<label style="font-size:12px;">img/s:</label>
-<input class="num-spin" type="number" id="speedNum" min="0.1" max="20" step="0.1" value="0.3">
+<div class="speed-control">
+<label class="speed-label">img/s:</label>
+<input class="num-input" type="number" id="speedNum" min="0.1" max="20" step="0.1" value="0.3" style="width:65px;">
 </div>
 
 <div id="slideshowMode">
 <span id="modeDisplay">⏸</span>
 </div>
 
-<div id="slideCounter" style="margin-left:10px; padding-left:10px; border-left:1px solid rgba(255,255,255,0.3); font-size:12px; min-width:50px;">
-<span id="counterDisplay">1/0</span>
+<div class="fade-control">
+<label class="fade-label">fade:</label>
+<input class="num-input" type="number" id="fadeNum" min="0.1" max="5" step="0.1" value="2" style="width:50px;">
+<span class="fade-unit">s</span>
 </div>
 
-<div id="fadeControl" style="display:flex; gap:5px; align-items:center; margin-left:10px; padding-left:10px; border-left:1px solid rgba(255,255,255,0.3);">
-<label style="font-size:12px;">fade:</label>
-<input class="num-spin" type="number" id="fadeNum" min="0.1" max="5" step="0.1" value="2" style="width:50px;">
-<span style="font-size:11px;">s</span>
+<div class="control-section" style="margin-left:auto;">
+<button onclick="toggleImageScale()" title="Toggle scale" class="control-btn" style="font-size:14px;">📐</button>
+<button onclick="toggleOriginalSize()" title="Original size" class="control-btn" style="font-size:12px;">100%</button>
+
+<div class="control-counter">
+<span id="slideshowCounterDisplay">1/0</span>
+</div>
+
+<button id="slideshowBad" class="control-btn control-btn-small">B</button>
+<button id="slideshowRemove" class="control-btn control-btn-small">R</button>
+<button id="slideshowGood" class="control-btn control-btn-small">G</button>
 </div>
 
 </div>
@@ -601,6 +679,10 @@ if(currentImages.length===0) return
 document.getElementById('slideshow').style.display='block'
 document.querySelector('header').style.display='none'
 
+// Make page tall so browser scrollbar works naturally
+document.body.style.height = (currentImages.length * 400 + window.innerHeight) + 'px'
+window.scrollTo(0, 0)
+
 slideIndex=0
 showSlide(0)
 
@@ -617,18 +699,29 @@ resetControlsHideTimer()
 function closeSlideshowAndReset(){
 document.getElementById('slideshow').style.display='none'
 document.querySelector('header').style.display='block'
+document.body.style.height = ''
+window.scrollTo(0, galleryScrollPosition)
 clearTimeout(controlsHideTimer)
 slideshowControls.classList.remove('hidden')
 }
 
 /* fade logic */
 
+let lastSlideShown = -1
+
 function showSlide(i){
 
 if(i<0) i=currentImages.length-1
 if(i>=currentImages.length) i=0
 
+// Only apply fade transition if actually changing slides
+if(i === lastSlideShown) return
+lastSlideShown = i
+
 slideIndex=i
+
+const slideshow = document.getElementById('slideshow')
+const isInSlideshow = slideshow && slideshow.style.display === 'block'
 
 // update progress bar at bottom
 if(currentImages.length>1){
@@ -647,9 +740,19 @@ active.classList.remove('active')
 next.classList.add('active')
 
 // Update image counter
-const counterDisplay = document.getElementById('counterDisplay')
+const counterDisplay = document.getElementById('slideshowCounterDisplay')
 if(counterDisplay){
 counterDisplay.textContent = (i+1) + '/' + currentImages.length
+}
+
+// Delay scroll update until fade finishes (but only if user isn't actively scrolling)
+if(isInSlideshow && !userScrollingInSlideshow){
+setTimeout(() => {
+if(slideshow.style.display === 'block' && !userScrollingInSlideshow){
+const scrollY = (i / (currentImages.length - 1)) * (document.body.scrollHeight - window.innerHeight)
+window.scrollTo(0, scrollY)
+}
+}, fadeDuration * 1000)
 }
 
 }
@@ -701,6 +804,111 @@ togglePlay()
 updateModeDisplay()
 }
 
+function togglePlayDirection(){
+slideshowDirection = slideshowDirection === 1 ? -1 : 1
+const dirBtn = document.getElementById('slideshowDirectionBtn')
+if(slideshowDirection === 1){
+dirBtn.textContent = '⏩'
+dirBtn.title = 'Play Forward'
+}else{
+dirBtn.textContent = '⏪'
+dirBtn.title = 'Play Backward'
+}
+updateModeDisplay()
+}
+
+let imageScaleMode = false // false = no max, true = with max
+
+let imageOriginalSizeMode = false // true = show at original image dimensions
+
+function toggleImageScale(){
+imageScaleMode = !imageScaleMode
+const slides = document.querySelectorAll('.slide img')
+const viewers = document.querySelectorAll('.viewer-image img')
+if(imageScaleMode){
+slides.forEach(img => {
+img.style.maxWidth = '95vw'
+img.style.maxHeight = '95vh'
+})
+viewers.forEach(img => {
+img.style.maxWidth = '95vw'
+img.style.maxHeight = '95vh'
+})
+}else{
+slides.forEach(img => {
+img.style.maxWidth = '100%'
+img.style.maxHeight = '100%'
+})
+viewers.forEach(img => {
+img.style.maxWidth = '100%'
+img.style.maxHeight = '100%'
+})
+}
+document.cookie = 'imageScaleMode=' + (imageScaleMode ? '1' : '0') + '; path=/; max-age=31536000'
+}
+
+function toggleOriginalSize(){
+imageOriginalSizeMode = !imageOriginalSizeMode
+const slides = document.querySelectorAll('.slide img')
+const viewers = document.querySelectorAll('.viewer-image img')
+if(imageOriginalSizeMode){
+// Show at original size - remove all constraints
+slides.forEach(img => {
+img.style.width = 'auto'
+img.style.height = 'auto'
+img.style.maxWidth = 'none'
+img.style.maxHeight = 'none'
+img.style.objectFit = 'none'
+})
+viewers.forEach(img => {
+img.style.width = 'auto'
+img.style.height = 'auto'
+img.style.maxWidth = 'none'
+img.style.maxHeight = 'none'
+img.style.objectFit = 'none'
+})
+}else{
+// Reset to normal - fill container with contain
+slides.forEach(img => {
+img.style.width = '100%'
+img.style.height = '100%'
+img.style.maxWidth = ''
+img.style.maxHeight = ''
+img.style.objectFit = 'contain'
+})
+viewers.forEach(img => {
+img.style.width = '100%'
+img.style.height = '100%'
+img.style.maxWidth = ''
+img.style.maxHeight = ''
+img.style.objectFit = 'contain'
+})
+}
+document.cookie = 'imageOriginalSizeMode=' + (imageOriginalSizeMode ? '1' : '0') + '; path=/; max-age=31536000'
+}
+
+function loadImageScaleFromCookie(){
+const cookies = document.cookie.split(';')
+for(let cookie of cookies){
+const [name, val] = cookie.trim().split('=')
+if(name === 'imageScaleMode' && val === '1'){
+imageScaleMode = false // Set to false so toggle sets it to true
+toggleImageScale()
+}
+}
+}
+
+function loadOriginalSizeFromCookie(){
+const cookies = document.cookie.split(';')
+for(let cookie of cookies){
+const [name, val] = cookie.trim().split('=')
+if(name === 'imageOriginalSizeMode' && val === '1'){
+imageOriginalSizeMode = false // Set to false so toggle sets it to true
+toggleOriginalSize()
+}
+}
+}
+
 /* speed control */
 
 document.getElementById('speedNum').addEventListener('input', e=>{
@@ -730,16 +938,51 @@ const slideshowControls = document.getElementById('slideshowControls')
 function resetControlsHideTimer(){
 clearTimeout(controlsHideTimer)
 slideshowControls.classList.remove('hidden')
+document.querySelectorAll('#slideshow .nav-btn').forEach(btn => btn.classList.remove('hidden'))
+resetSlideshowOverlayButtons()
 controlsHideTimer = setTimeout(() => {
 const slideshow = document.getElementById('slideshow')
 if(slideshow.style.display === 'block'){
 slideshowControls.classList.add('hidden')
+document.querySelectorAll('#slideshow .nav-btn').forEach(btn => btn.classList.add('hidden'))
+document.querySelectorAll('.slide .overlay-bad, .slide .overlay-good').forEach(btn => {
+btn.classList.add('hidden')
+})
 }
 }, 2000)
 }
 
 document.getElementById('slideshow').addEventListener('mousemove', resetControlsHideTimer)
 document.getElementById('slideshow').addEventListener('wheel', resetControlsHideTimer)
+
+/* slideshow overlay buttons hide with controls */
+
+function resetSlideshowOverlayButtons(){
+document.querySelectorAll('.slide .overlay-bad, .slide .overlay-good').forEach(btn => {
+btn.classList.remove('hidden')
+})
+}
+
+/* viewer controls auto-hide after 2 seconds */
+
+let viewerButtonsHideTimer = null
+
+function resetViewerButtonsHideTimer(){
+clearTimeout(viewerButtonsHideTimer)
+const viewerControls = document.getElementById('viewerControls')
+viewerControls.classList.remove('hidden')
+document.querySelectorAll('#viewer .nav-btn').forEach(btn => btn.classList.remove('hidden'))
+viewerButtonsHideTimer = setTimeout(() => {
+const viewer = document.getElementById('viewer')
+if(viewer.style.display === 'flex'){
+viewerControls.classList.add('hidden')
+document.querySelectorAll('#viewer .nav-btn').forEach(btn => btn.classList.add('hidden'))
+}
+}, 2000)
+}
+
+document.getElementById('viewer').addEventListener('mousemove', resetViewerButtonsHideTimer)
+document.getElementById('viewer').addEventListener('wheel', resetViewerButtonsHideTimer)
 
 /* scroll position tracking for gallery to fullscreen */
 
@@ -754,6 +997,8 @@ let autoscrollActive = false
 let lastImageIndex = -1
 let lastSlideshowIndex = -1
 let ignoreScrollEvents = false
+let userScrollingInSlideshow = false
+let scrollTimeoutId = null
 
 // Detect middle mouse down for Firefox autoscroll
 document.addEventListener('mousedown', e => {
@@ -762,24 +1007,12 @@ lastMiddleClick = Date.now()
 }
 })
 
-// Regular wheel scroll - SLIDESHOW ONLY
+// Wheel scroll in slideshow - let browser scroll naturally, scroll event handles slide change
 document.addEventListener('wheel', e => {
 const slideshow = document.getElementById('slideshow')
 if(slideshow.style.display !== 'block') return
-
-e.preventDefault()
-cumulativeScroll += e.deltaY
-
-if(Math.abs(cumulativeScroll) >= scrollThreshold){
-if(cumulativeScroll > 0){
-showSlide(slideIndex + 1)
-cumulativeScroll = 0
-} else if(cumulativeScroll < 0){
-showSlide(slideIndex - 1)
-cumulativeScroll = 0
-}
-}
-}, {passive: false})
+// No preventDefault - let browser scroll so native scrollbar works
+}, {passive: true})
 
 // Track scroll position for both viewer and slideshow modes
 document.addEventListener('scroll', () => {
@@ -790,6 +1023,13 @@ const now = Date.now()
 // Slideshow mode - use proportional scroll mapping like viewer
 if(slideshow.style.display === 'block'){
 if(currentImages.length === 0) return
+
+// Mark that user is scrolling - prevents programmatic scroll updates from conflicting
+userScrollingInSlideshow = true
+clearTimeout(scrollTimeoutId)
+scrollTimeoutId = setTimeout(() => {
+userScrollingInSlideshow = false
+}, 300)
 
 const scrollY = window.scrollY || document.documentElement.scrollTop
 const documentHeight = document.documentElement.scrollHeight
@@ -906,6 +1146,12 @@ const viewerCounterDisplay = document.getElementById('viewerCounterDisplay')
 if(viewerCounterDisplay){
 viewerCounterDisplay.textContent = (currentIndex+1) + '/' + currentImages.length
 }
+
+// Update button visibility based on current folder
+updateViewerButtonVisibility()
+
+// Reset button fade timer
+resetViewerButtonsHideTimer()
 }
 
 const g=document.createElement('button')
@@ -955,6 +1201,36 @@ btn.textContent=currentFolder==='good'?'R':currentFolder==='bad'?'G':'G'
 document.querySelectorAll('.slide .overlay-bad').forEach(btn=>{
 btn.textContent=currentFolder==='bad'?'R':currentFolder==='good'?'B':'B'
 })
+const slideshowGood = document.getElementById('slideshowGood')
+const slideshowBad = document.getElementById('slideshowBad')
+if(slideshowGood) slideshowGood.textContent = currentFolder==='good'?'R':currentFolder==='bad'?'G':'G'
+if(slideshowBad) slideshowBad.textContent = currentFolder==='bad'?'R':currentFolder==='good'?'B':'B'
+}
+
+function updateSlideshowButtonVisibility(){
+const slideshowBad = document.getElementById('slideshowBad')
+const slideshowRemove = document.getElementById('slideshowRemove')
+const slideshowGood = document.getElementById('slideshowGood')
+
+// Hide all first
+slideshowBad.style.display = 'none'
+slideshowRemove.style.display = 'none'
+slideshowGood.style.display = 'none'
+
+// Show only the two possible destinations
+if(currentFolder==='good'){
+// In good folder, can move to bad or regular
+slideshowBad.style.display = 'block'
+slideshowRemove.style.display = 'block'
+}else if(currentFolder==='bad'){
+// In bad folder, can move to good or regular
+slideshowGood.style.display = 'block'
+slideshowRemove.style.display = 'block'
+}else{
+// In all/regular, can move to good or bad
+slideshowGood.style.display = 'block'
+slideshowBad.style.display = 'block'
+}
 }
 
 function loadImages(folder){
@@ -968,6 +1244,12 @@ currentImages=images
 renderImages(images)
 loadCounts()
 updateSlideshowButtonLabels()
+updateSlideshowButtonVisibility()
+
+// If viewer is open, update its button visibility for new folder
+if(viewer.style.display==='flex'){
+updateViewerButtonVisibility()
+}
 })
 
 }
@@ -1009,6 +1291,12 @@ btnBad.textContent = `Bad (${data.bad})`
 })
 }
 
+function startFullscreenViewer(){
+if(currentImages.length===0) return
+showImage(0)
+resetViewerButtonsHideTimer()
+}
+
 function showImage(index){
 if(index<0) index=currentImages.length-1
 if(index>=currentImages.length) index=0
@@ -1022,13 +1310,42 @@ const viewerCounterDisplay = document.getElementById('viewerCounterDisplay')
 if(viewerCounterDisplay){
 viewerCounterDisplay.textContent = (index+1) + '/' + currentImages.length
 }
+
+// Update button visibility
+updateViewerButtonVisibility()
+
+// Reset button fade timer
+resetViewerButtonsHideTimer()
+}
+
+function updateViewerButtonVisibility(){
+const viewerBad = document.getElementById('viewerBad')
+const viewerRemove = document.getElementById('viewerRemove')
+const viewerGood = document.getElementById('viewerGood')
+
+// Hide all first
+viewerBad.style.display = 'none'
+viewerRemove.style.display = 'none'
+viewerGood.style.display = 'none'
+
+// Show only the two possible destinations
+if(currentFolder==='good'){
+// In good folder, can move to bad or regular
+viewerBad.style.display = 'block'
+viewerRemove.style.display = 'block'
+}else if(currentFolder==='bad'){
+// In bad folder, can move to good or regular
+viewerGood.style.display = 'block'
+viewerRemove.style.display = 'block'
+}else{
+// In all/regular, can move to good or bad
+viewerGood.style.display = 'block'
+viewerBad.style.display = 'block'
+}
 }
 
 function nextImage(){ showImage(currentIndex+1) }
 function prevImage(){ showImage(currentIndex-1) }
-
-document.getElementById('nextBtn').onclick=e=>{e.stopPropagation(); nextImage()}
-document.getElementById('prevBtn').onclick=e=>{e.stopPropagation(); prevImage()}
 
 document.addEventListener('keydown', e=>{
 if(viewer.style.display==='flex'){
@@ -1090,6 +1407,11 @@ else if(currentFolder==='good') target='bad'
 moveViewerImage(target)
 }
 
+document.getElementById('viewerRemove').onclick=e=>{
+e.stopPropagation()
+moveViewerImage('regular')
+}
+
 /* slideshow G/B buttons */
 
 function moveSlideshowImage(target){
@@ -1103,6 +1425,7 @@ body:JSON.stringify({image:src.split('/').pop(), target})
 if(r.ok){
 currentImages.splice(slideIndex, 1)
 if(currentImages.length===0){ document.getElementById('slideshow').style.display='none'; return }
+renderImages(currentImages)
 showSlide(slideIndex >= currentImages.length ? 0 : slideIndex)
 loadCounts()
 updateSlideshowButtonLabels()
@@ -1123,6 +1446,23 @@ e.stopPropagation()
 moveSlideshowImage(currentFolder==='bad'?'regular':'bad')
 }
 })
+
+/* slideshow controls bar buttons */
+
+document.getElementById('slideshowGood').onclick=e=>{
+e.stopPropagation()
+moveSlideshowImage(currentFolder==='good'?'regular':'good')
+}
+
+document.getElementById('slideshowBad').onclick=e=>{
+e.stopPropagation()
+moveSlideshowImage(currentFolder==='bad'?'regular':'bad')
+}
+
+document.getElementById('slideshowRemove').onclick=e=>{
+e.stopPropagation()
+moveSlideshowImage('regular')
+}
 
 /* meow settings */
 
@@ -1286,6 +1626,8 @@ saveMeowSettings()
 loadCounts()
 loadMeowSettings()
 startMeowSpawning()
+loadImageScaleFromCookie()
+loadOriginalSizeFromCookie()
 
 // Load slideshow settings from localStorage
 const savedSpeed = localStorage.getItem('slideshowSpeed')
