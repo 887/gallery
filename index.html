@@ -1745,63 +1745,45 @@ function moveGalleryImage(src, target, container){
 const slideshow = document.getElementById('slideshow')
 const inSlideshow = slideshow && slideshow.style.display === 'block'
 
-// If in slideshow: stop completely, freeze current fade, do our own fade-out, move, resume
+// If in slideshow: stop completely, fade to next, move, resume
 if(inSlideshow){
 
-// 1. STOP SLIDESHOW COMPLETELY — kill the interval timer
+// 1. STOP slideshow completely and block any pending showSlide
 clearInterval(slideshowTimer)
 playing = false
+lastSlideShown = slideIndex // block in-flight showSlide calls
 
-const cont = document.getElementById('slideContainer')
-const currentSlide = cont.lastElementChild
-
-// Increment slideIndex FIRST (advance to next image before showing it)
-slideIndex++
-if(slideIndex >= currentImages.length) slideIndex = 0
-
-// Update counter display immediately
-const counterDisplay = document.getElementById('slideshowCounterDisplay')
-if(counterDisplay){
-counterDisplay.textContent = (slideIndex+1) + '/' + currentImages.length
-}
-
-// 2. REUSE NEXT IMAGE FROM POOL and start fade immediately
-const nextSlide = slidePool[slidePoolIndex]
-slidePoolIndex = (slidePoolIndex + 1) % slidePool.length
-
-// Update image source
-const nextImg = nextSlide.querySelector('img')
-nextImg.src = currentImages[slideIndex]
-
-// Update z-index
-nextSlide.style.zIndex = ++slideZIndex
-nextSlide.style.opacity = '0'
-nextSlide.style.transition = 'none'
-
-// Force reflow before starting fade
-nextSlide.getBoundingClientRect()
-
-// 3. FADE IN new image immediately
-nextSlide.style.transition = `opacity ${fadeDuration}s ease`
-nextSlide.style.opacity = '1'
-
-// 4. FREEZE current slide in background (after fade already started)
-if(currentSlide){
-const frozenOpacity = getComputedStyle(currentSlide).opacity
-currentSlide.style.transition = 'none'
-currentSlide.style.opacity = frozenOpacity
-Array.from(cont.children).forEach(s => {
-if(s !== currentSlide && s !== nextSlide){
+// 2. FREEZE all pool slides at their current opacity mid-transition
+slidePool.forEach(s => {
 const op = getComputedStyle(s).opacity
 s.style.transition = 'none'
 s.style.opacity = op
-}
 })
-}
+
+// 3. Advance slideIndex to next image for visual transition
+const oldIndex = slideIndex
+slideIndex++
+if(slideIndex >= currentImages.length) slideIndex = 0
+
+// Update counter immediately
+const counterDisplay = document.getElementById('slideshowCounterDisplay')
+if(counterDisplay) counterDisplay.textContent = (slideIndex+1) + '/' + currentImages.length
+
+// 4. Pick next pool slide, set image, start fading in NOW
+const nextSlide = slidePool[slidePoolIndex]
+slidePoolIndex = (slidePoolIndex + 1) % slidePool.length
+
+nextSlide.querySelector('img').src = currentImages[slideIndex]
+nextSlide.style.zIndex = ++slideZIndex
+nextSlide.style.opacity = '0'
+nextSlide.style.transition = 'none'
+nextSlide.getBoundingClientRect()
+nextSlide.style.transition = `opacity ${fadeDuration}s ease`
+nextSlide.style.opacity = '1'
 
 const imageToMove = src
 
-// 5. After fade completes, move the image
+// 5. After fade completes, do the move
 setTimeout(() => {
 fetch('/api/move',{
 method:'POST',
@@ -1818,26 +1800,29 @@ closeSlideshowAndReset()
 return
 }
 
-// Clamp index after removal
+// After removal, the image we're showing has shifted down by 1 position
+// (unless we wrapped to 0, in which case we stay at 0)
+if(slideIndex > 0) slideIndex--
+
+// Clamp index if somehow out of bounds
 if(slideIndex >= currentImages.length) slideIndex = currentImages.length - 1
 
-// 6. Remove old slides, keep the new one that's already faded in
-const allSlides = Array.from(cont.children)
-allSlides.slice(0, -1).forEach(s => s.remove()) // Remove all but last
+// Update counter to reflect new array length
+const counterDisplay = document.getElementById('slideshowCounterDisplay')
+if(counterDisplay) counterDisplay.textContent = (slideIndex+1) + '/' + currentImages.length
 
-// 8. RE-ENABLE SLIDESHOW (new image already visible, no black flash)
+// Sync lastSlideShown so normal showSlide guard works correctly
+lastSlideShown = slideIndex
+
+// RE-ENABLE slideshow
 playing = true
-const interval = Math.round(1000 / slideshowSpeed)
-slideshowTimer = setInterval(playStep, interval)
+slideshowTimer = setInterval(playStep, Math.round(1000 / slideshowSpeed))
 }
 }).catch(err=>{
 console.error('Move failed:', err)
-// On error, remove old slides but keep new one visible
-const allSlides = Array.from(cont.children)
-allSlides.slice(0, -1).forEach(s => s.remove())
+lastSlideShown = slideIndex
 playing = true
-const interval = Math.round(1000 / slideshowSpeed)
-slideshowTimer = setInterval(playStep, interval)
+slideshowTimer = setInterval(playStep, Math.round(1000 / slideshowSpeed))
 })
 }, fadeDuration * 1000)
 return
