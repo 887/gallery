@@ -125,10 +125,6 @@ font-size:11px;
 max-height:220px;
 overflow-y:auto;
 }
-opacity:0;
-pointer-events:none;
-transition:opacity 0.3s ease;
-}
 
 #meowControl.hidden{
 opacity:0;
@@ -325,7 +321,7 @@ cursor:pointer;
 border-radius:5px;
 transition:opacity 0.3s ease;
 opacity:1;
-z-index:5002;
+z-index:999999;
 pointer-events:auto !important;
 }
 
@@ -347,7 +343,7 @@ top:0;
 bottom:0;
 background:black;
 display:none;
-z-index:5000;
+z-index:100;
 overflow:hidden;
 }
 
@@ -402,7 +398,7 @@ transform:translateX(-50%);
 display:flex;
 gap:10px;
 align-items:center;
-z-index:5002;
+z-index:999999;
 background:rgba(0,0,0,0.25);
 padding:10px 20px;
 border-radius:8px;
@@ -678,7 +674,7 @@ font-size:12px;
 
 <button onclick="event.stopPropagation(); nextImage()" class="nav-btn right">▶</button>
 
-<div id="viewerControls" style="position:fixed; bottom:1px; left:50%; transform:translateX(-50%); display:flex; gap:10px; align-items:center; z-index:5002; background:rgba(0,0,0,0.25); padding:10px 20px; border-radius:8px; transition:opacity 0.3s ease; opacity:1;">
+<div id="viewerControls" style="position:fixed; bottom:1px; left:50%; transform:translateX(-50%); display:flex; gap:10px; align-items:center; z-index:999999; background:rgba(0,0,0,0.25); padding:10px 20px; border-radius:8px; transition:opacity 0.3s ease; opacity:1;">
 
 <button onclick="prevImage()" title="Prev" class="control-btn">◀</button>
 <button onclick="nextImage()" title="Next" class="control-btn">▶</button>
@@ -709,16 +705,7 @@ font-size:12px;
 
 <button onclick="event.stopPropagation(); resetControlsHideTimer(); disableAutoAdvance(); showSlide(slideIndex-1)" class="nav-btn left">◀</button>
 
-<div class="slide" id="slideA">
-<div class="slide-image">
-<img>
-</div>
-</div>
-<div class="slide" id="slideB">
-<div class="slide-image">
-<img>
-</div>
-</div>
+<div id="slideContainer"></div>
 
 <button onclick="event.stopPropagation(); resetControlsHideTimer(); disableAutoAdvance(); showSlide(slideIndex+1)" class="nav-btn right">▶</button>
 
@@ -921,6 +908,28 @@ function renderFolderButtons() {
 
 /* slideshow start */
 
+let slidePool = []
+let slidePoolIndex = 0
+
+function initSlidePool(){
+const container = document.getElementById('slideContainer')
+slidePool = []
+for(let i = 0; i < 50; i++){
+const slide = document.createElement('div')
+slide.className = 'slide'
+slide.style.opacity = '0'
+slide.style.transition = 'none'
+const slideImg = document.createElement('div')
+slideImg.className = 'slide-image'
+const img = document.createElement('img')
+slideImg.appendChild(img)
+slide.appendChild(slideImg)
+container.appendChild(slide)
+slidePool.push(slide)
+}
+slidePoolIndex = 0
+}
+
 function startSlideshow(){
 
 if(currentImages.length===0) return
@@ -931,6 +940,9 @@ document.querySelector('header').style.display='none'
 // Make page tall so browser scrollbar works naturally
 document.body.style.height = (currentImages.length * 400 + window.innerHeight) + 'px'
 window.scrollTo(0, 0)
+
+// Initialize slide pool
+initSlidePool()
 
 slideIndex=0
 showSlide(0)
@@ -953,18 +965,28 @@ document.body.style.height = ''
 window.scrollTo(0, galleryScrollPosition)
 clearTimeout(controlsHideTimer)
 slideshowControls.classList.remove('hidden')
+// Reset pool and all slides to invisible
+slidePool.forEach(s => {
+s.style.opacity = '0'
+s.style.transition = 'none'
+s.querySelector('img').src = ''
+})
+slidePoolIndex = 0
+slideZIndex = 5001
+lastSlideShown = -1
 }
 
 /* fade logic */
 
 let lastSlideShown = -1
+let slideZIndex = 5001
 
 function showSlide(i){
 
 if(i<0) i=currentImages.length-1
 if(i>=currentImages.length) i=0
 
-// Only apply fade transition if actually changing slides
+// Only show if actually changing slides
 if(i === lastSlideShown) return
 lastSlideShown = i
 
@@ -973,21 +995,10 @@ slideIndex=i
 const slideshow = document.getElementById('slideshow')
 const isInSlideshow = slideshow && slideshow.style.display === 'block'
 
-// update progress bar at bottom
+// update progress bar
 if(currentImages.length>1){
 document.getElementById('slideProgress').style.width=(i/(currentImages.length-1)*100)+'%'
 }
-
-const slide1=document.getElementById('slideA')
-const slide2=document.getElementById('slideB')
-
-const active=slide1.classList.contains('active')?slide1:slide2
-const next=active===slide1?slide2:slide1
-
-next.querySelector('img').src=currentImages[i]
-
-active.classList.remove('active')
-next.classList.add('active')
 
 // Update image counter
 const counterDisplay = document.getElementById('slideshowCounterDisplay')
@@ -995,7 +1006,45 @@ if(counterDisplay){
 counterDisplay.textContent = (i+1) + '/' + currentImages.length
 }
 
-// Delay scroll update until fade finishes (but only if user isn't actively scrolling)
+// Reuse slide from pool instead of creating new element
+const slide = slidePool[slidePoolIndex]
+slidePoolIndex = (slidePoolIndex + 1) % slidePool.length
+
+// Update image source
+const img = slide.querySelector('img')
+img.src = currentImages[i]
+
+// Apply current display modes
+if(imageOriginalSizeMode){
+img.style.width = 'auto'
+img.style.height = 'auto'
+img.style.maxWidth = 'none'
+img.style.maxHeight = 'none'
+img.style.objectFit = 'none'
+} else if(imageScaleMode){
+img.style.maxWidth = '95vw'
+img.style.maxHeight = '95vh'
+} else {
+img.style.width = '100%'
+img.style.height = '100%'
+img.style.maxWidth = ''
+img.style.maxHeight = ''
+img.style.objectFit = 'contain'
+}
+
+// Update z-index
+slide.style.zIndex = ++slideZIndex
+slide.style.opacity = '0'
+slide.style.transition = 'none'
+
+// Force reflow so transition plays from opacity:0
+slide.getBoundingClientRect()
+
+// Fade in
+slide.style.transition = `opacity ${fadeDuration}s ease`
+slide.style.opacity = '1'
+
+// Delay scroll update until fade finishes
 if(isInSlideshow && !userScrollingInSlideshow){
 setTimeout(() => {
 if(slideshow.style.display === 'block' && !userScrollingInSlideshow){
@@ -1537,11 +1586,11 @@ btn.setAttribute('data-move-btn', 'true');
 btn.className = 'control-btn control-btn-small';
 btn.textContent = generateSmartAbbreviation(folder, allFolders.filter(f => f !== folder));
 btn.title = 'Move to ' + folder;
-btn.onclick = () => {
+btn.onclick = (e) => {
+e.stopPropagation();
 if(slideIndex >= 0 && slideIndex < currentImages.length) {
 const src = currentImages[slideIndex];
 moveGalleryImage(src, folder, null);
-nextOrCloseSlideshow();
 }
 };
 controlSection.appendChild(btn);
@@ -1553,11 +1602,11 @@ upBtn.setAttribute('data-move-btn', 'true');
 upBtn.className = 'control-btn control-btn-small';
 upBtn.textContent = '↑';
 upBtn.title = 'Move to root';
-upBtn.onclick = () => {
+upBtn.onclick = (e) => {
+e.stopPropagation();
 if(slideIndex >= 0 && slideIndex < currentImages.length) {
 const src = currentImages[slideIndex];
 moveGalleryImage(src, 'root', null);
-nextOrCloseSlideshow();
 }
 };
 controlSection.appendChild(upBtn);
@@ -1569,11 +1618,11 @@ btn.setAttribute('data-move-btn', 'true');
 btn.className = 'control-btn control-btn-small';
 btn.textContent = generateSmartAbbreviation(folder, otherFolders.filter(f => f !== folder));
 btn.title = 'Move to ' + folder;
-btn.onclick = () => {
+btn.onclick = (e) => {
+e.stopPropagation();
 if(slideIndex >= 0 && slideIndex < currentImages.length) {
 const src = currentImages[slideIndex];
 moveGalleryImage(src, folder, null);
-nextOrCloseSlideshow();
 }
 };
 controlSection.appendChild(btn);
@@ -1693,22 +1742,108 @@ renderImages()
 }
 
 function moveGalleryImage(src, target, container){
-// Cancel active fade animations in slideshow before moving image
 const slideshow = document.getElementById('slideshow')
-if(slideshow && slideshow.style.display === 'block'){
-// Force-cancel any active CSS transitions by temporarily removing active class
-const slideA = document.getElementById('slideA')
-const slideB = document.getElementById('slideB')
-const active = slideA.classList.contains('active') ? slideA : slideB
-// Remove transition temporarily to cancel animation
-active.style.transition = 'none'
-active.classList.remove('active')
-// Force reflow to ensure transition cancellation
-void active.offsetHeight
-// Restore transition for next fade
-active.style.transition = `opacity var(--fade-duration, 1.5s)`
+const inSlideshow = slideshow && slideshow.style.display === 'block'
+
+// If in slideshow: stop completely, freeze current fade, do our own fade-out, move, resume
+if(inSlideshow){
+
+// 1. STOP SLIDESHOW COMPLETELY — kill the interval timer
+clearInterval(slideshowTimer)
+playing = false
+
+const cont = document.getElementById('slideContainer')
+const currentSlide = cont.lastElementChild
+
+// Increment slideIndex FIRST (advance to next image before showing it)
+slideIndex++
+if(slideIndex >= currentImages.length) slideIndex = 0
+
+// Update counter display immediately
+const counterDisplay = document.getElementById('slideshowCounterDisplay')
+if(counterDisplay){
+counterDisplay.textContent = (slideIndex+1) + '/' + currentImages.length
 }
 
+// 2. REUSE NEXT IMAGE FROM POOL and start fade immediately
+const nextSlide = slidePool[slidePoolIndex]
+slidePoolIndex = (slidePoolIndex + 1) % slidePool.length
+
+// Update image source
+const nextImg = nextSlide.querySelector('img')
+nextImg.src = currentImages[slideIndex]
+
+// Update z-index
+nextSlide.style.zIndex = ++slideZIndex
+nextSlide.style.opacity = '0'
+nextSlide.style.transition = 'none'
+
+// Force reflow before starting fade
+nextSlide.getBoundingClientRect()
+
+// 3. FADE IN new image immediately
+nextSlide.style.transition = `opacity ${fadeDuration}s ease`
+nextSlide.style.opacity = '1'
+
+// 4. FREEZE current slide in background (after fade already started)
+if(currentSlide){
+const frozenOpacity = getComputedStyle(currentSlide).opacity
+currentSlide.style.transition = 'none'
+currentSlide.style.opacity = frozenOpacity
+Array.from(cont.children).forEach(s => {
+if(s !== currentSlide && s !== nextSlide){
+const op = getComputedStyle(s).opacity
+s.style.transition = 'none'
+s.style.opacity = op
+}
+})
+}
+
+const imageToMove = src
+
+// 5. After fade completes, move the image
+setTimeout(() => {
+fetch('/api/move',{
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({image:imageToMove.startsWith('/')?imageToMove.slice(1):imageToMove, target})
+}).then(r=>{
+if(r.ok){
+allImages=allImages.filter(ii=>ii!==imageToMove)
+currentImages=currentImages.filter(ii=>ii!==imageToMove)
+loadCounts()
+
+if(currentImages.length === 0){
+closeSlideshowAndReset()
+return
+}
+
+// Clamp index after removal
+if(slideIndex >= currentImages.length) slideIndex = currentImages.length - 1
+
+// 6. Remove old slides, keep the new one that's already faded in
+const allSlides = Array.from(cont.children)
+allSlides.slice(0, -1).forEach(s => s.remove()) // Remove all but last
+
+// 8. RE-ENABLE SLIDESHOW (new image already visible, no black flash)
+playing = true
+const interval = Math.round(1000 / slideshowSpeed)
+slideshowTimer = setInterval(playStep, interval)
+}
+}).catch(err=>{
+console.error('Move failed:', err)
+// On error, remove old slides but keep new one visible
+const allSlides = Array.from(cont.children)
+allSlides.slice(0, -1).forEach(s => s.remove())
+playing = true
+const interval = Math.round(1000 / slideshowSpeed)
+slideshowTimer = setInterval(playStep, interval)
+})
+}, fadeDuration * 1000)
+return
+}
+
+// Normal gallery move (not in slideshow)
 fetch('/api/move',{
 method:'POST',
 headers:{'Content-Type':'application/json'},
@@ -1720,16 +1855,9 @@ allImages=allImages.filter(i=>i!==src)
 currentImages=currentImages.filter(i=>i!==src)
 loadCounts()
 if(!container) renderImages()
-// If in slideshow, advance to next image if current was removed
-if(slideshow && slideshow.style.display === 'block' && currentImages.length > 0){
-// Reset to valid slide index
-if(slideIndex >= currentImages.length) slideIndex = currentImages.length - 1
-if(slideIndex < 0) slideIndex = 0
-lastSlideShown = -1 // Force refresh
-showSlide(slideIndex)
 }
+})
 }
-})}
 
 
 /* counts and viewer navigation */
