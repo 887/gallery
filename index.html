@@ -71,8 +71,13 @@ padding:2px 6px;
 font-size:12px;
 cursor:pointer;
 z-index:100;
-opacity:0.85;
+opacity:0;
 transition:opacity 0.3s ease;
+pointer-events:none;
+}
+.image-container:hover .gallery-info-btn{
+opacity:0.85;
+pointer-events:auto;
 }
 .gallery-info-btn:hover{opacity:1;}
 .gallery-info-btn.hidden{opacity:0;pointer-events:none;}
@@ -264,11 +269,17 @@ background:rgba(255,255,255,0.3);
 color:black;
 border-radius:3px;
 cursor:pointer;
-opacity:0.8;
+opacity:0;
 transition:opacity 0.3s ease;
 z-index:100;
 margin:0;
 flex-shrink:0;
+pointer-events:none;
+}
+
+.image-container:hover .overlay-btn{
+opacity:0.8;
+pointer-events:auto;
 }
 
 .overlay-btn.hidden{
