@@ -258,6 +258,15 @@ border-radius:6px;
 display:block;
 }
 
+.gallery video{
+width:100%;
+height:200px;
+object-fit:cover;
+cursor:pointer;
+border-radius:6px;
+display:block;
+}
+
 /* overlay buttons */
 
 .overlay-btn{
@@ -311,6 +320,13 @@ height:100%;
 }
 
 .viewer-image img{
+width:100%;
+height:100%;
+display:block;
+object-fit:contain;
+}
+
+.viewer-image video{
 width:100%;
 height:100%;
 display:block;
@@ -391,6 +407,14 @@ height:100%;
 }
 
 .slide img{
+width:100%;
+height:100%;
+display:block;
+object-fit:contain;
+will-change:opacity;
+}
+
+.slide video{
 width:100%;
 height:100%;
 display:block;
@@ -679,9 +703,10 @@ font-size:12px;
 
 <button onclick="event.stopPropagation(); prevImage()" class="nav-btn left">◀</button>
 
-<div class="viewer-image">
+<div class="viewer-image" id="viewerMedia">
 
-<img id="full">
+<img id="full" style="display: none;">
+<video id="fullVideo" style="display: none; width: 100%; height: 100%; object-fit: contain;" controls muted playsinline></video>
 
 </div>
 
@@ -944,7 +969,14 @@ slide.style.transition = 'none'
 const slideImg = document.createElement('div')
 slideImg.className = 'slide-image'
 const img = document.createElement('img')
+const video = document.createElement('video')
+video.controls = false
+video.loop = true
+video.muted = true
+video.autoplay = true
+video.style.display = 'none'
 slideImg.appendChild(img)
+slideImg.appendChild(video)
 slide.appendChild(slideImg)
 container.appendChild(slide)
 slidePool.push(slide)
@@ -1032,26 +1064,46 @@ counterDisplay.textContent = (i+1) + '/' + currentImages.length
 const slide = slidePool[slidePoolIndex]
 slidePoolIndex = (slidePoolIndex + 1) % slidePool.length
 
-// Update image source
+// Update media source
+const src = currentImages[i]
+const isVideo = isVideoFile(src)
 const img = slide.querySelector('img')
-img.src = currentImages[i]
+const video = slide.querySelector('video')
+if(isVideo) {
+    img.style.display = 'none'
+    img.src = ''
+    video.style.display = 'block'
+    video.src = src
+} else {
+    video.style.display = 'none'
+    video.src = ''
+    img.style.display = 'block'
+    img.src = src
+}
 
 // Apply current display modes
-if(imageOriginalSizeMode){
-img.style.width = 'auto'
-img.style.height = 'auto'
-img.style.maxWidth = 'none'
-img.style.maxHeight = 'none'
-img.style.objectFit = 'none'
-} else if(imageScaleMode){
-img.style.maxWidth = '95vw'
-img.style.maxHeight = '95vh'
+const applyStyles = (el) => {
+    if(imageOriginalSizeMode){
+        el.style.width = 'auto'
+        el.style.height = 'auto'
+        el.style.maxWidth = 'none'
+        el.style.maxHeight = 'none'
+        el.style.objectFit = 'none'
+    } else if(imageScaleMode){
+        el.style.maxWidth = '95vw'
+        el.style.maxHeight = '95vh'
+    } else {
+        el.style.width = '100%'
+        el.style.height = '100%'
+        el.style.maxWidth = ''
+        el.style.maxHeight = ''
+        el.style.objectFit = 'contain'
+    }
+}
+if(isVideo) {
+    applyStyles(video)
 } else {
-img.style.width = '100%'
-img.style.height = '100%'
-img.style.maxWidth = ''
-img.style.maxHeight = ''
-img.style.objectFit = 'contain'
+    applyStyles(img)
 }
 
 // Update z-index
@@ -1151,23 +1203,23 @@ let imageOriginalSizeMode = false // true = show at original image dimensions
 
 function toggleImageScale(){
 imageScaleMode = !imageScaleMode
-const slides = document.querySelectorAll('.slide img')
-const viewers = document.querySelectorAll('.viewer-image img')
+const slideImgs = document.querySelectorAll('.slide img, .slide video')
+const viewerImgs = document.querySelectorAll('.viewer-image img, .viewer-image video')
 if(imageScaleMode){
-slides.forEach(img => {
+slideImgs.forEach(img => {
 img.style.maxWidth = '95vw'
 img.style.maxHeight = '95vh'
 })
-viewers.forEach(img => {
+viewerImgs.forEach(img => {
 img.style.maxWidth = '95vw'
 img.style.maxHeight = '95vh'
 })
 }else{
-slides.forEach(img => {
+slideImgs.forEach(img => {
 img.style.maxWidth = '100%'
 img.style.maxHeight = '100%'
 })
-viewers.forEach(img => {
+viewerImgs.forEach(img => {
 img.style.maxWidth = '100%'
 img.style.maxHeight = '100%'
 })
@@ -1177,18 +1229,18 @@ document.cookie = 'imageScaleMode=' + (imageScaleMode ? '1' : '0') + '; path=/; 
 
 function toggleOriginalSize(){
 imageOriginalSizeMode = !imageOriginalSizeMode
-const slides = document.querySelectorAll('.slide img')
-const viewers = document.querySelectorAll('.viewer-image img')
+const slideImgs = document.querySelectorAll('.slide img, .slide video')
+const viewerImgs = document.querySelectorAll('.viewer-image img, .viewer-image video')
 if(imageOriginalSizeMode){
 // Show at original size - remove all constraints
-slides.forEach(img => {
+slideImgs.forEach(img => {
 img.style.width = 'auto'
 img.style.height = 'auto'
 img.style.maxWidth = 'none'
 img.style.maxHeight = 'none'
 img.style.objectFit = 'none'
 })
-viewers.forEach(img => {
+viewerImgs.forEach(img => {
 img.style.width = 'auto'
 img.style.height = 'auto'
 img.style.maxWidth = 'none'
@@ -1197,14 +1249,14 @@ img.style.objectFit = 'none'
 })
 }else{
 // Reset to normal - fill container with contain
-slides.forEach(img => {
+slideImgs.forEach(img => {
 img.style.width = '100%'
 img.style.height = '100%'
 img.style.maxWidth = ''
 img.style.maxHeight = ''
 img.style.objectFit = 'contain'
 })
-viewers.forEach(img => {
+viewerImgs.forEach(img => {
 img.style.width = '100%'
 img.style.height = '100%'
 img.style.maxWidth = ''
@@ -1303,7 +1355,41 @@ btn.classList.remove('hidden')
 })
 }
 
-/* viewer controls auto-hide after 2 seconds */
+function setViewerMedia(src) {
+    const isVideo = isVideoFile(src);
+    const img = document.getElementById('full');
+    const video = document.getElementById('fullVideo');
+    
+    if(isVideo) {
+        img.style.display = 'none';
+        img.src = '';
+        video.style.display = 'block';
+        video.src = src;
+    } else {
+        video.style.display = 'none';
+        video.src = '';
+        img.style.display = 'block';
+        img.src = src;
+    }
+    
+    // Hide overlay buttons on gallery images when in fullscreen
+    const galleryButtons = document.querySelectorAll('.image-container div[style*="position: absolute"]');
+    galleryButtons.forEach(btn => btn.style.display = 'none');
+    
+    // Update viewer counter with correct index
+    const viewerCounterDisplay = document.getElementById('viewerCounterDisplay');
+    if(viewerCounterDisplay){
+        viewerCounterDisplay.textContent = (currentIndex+1) + '/' + currentImages.length;
+    }
+    
+    // Update button visibility based on current folder
+    updateViewerFolderButtons();
+    
+    // Reset button fade timer
+    resetViewerButtonsHideTimer();
+}
+
+/* image/video viewing */
 
 let viewerButtonsHideTimer = null
 
@@ -1475,15 +1561,34 @@ togglePlay()
 
 /* gallery */
 
+function isVideoFile(src) {
+    return src.toLowerCase().endsWith('.webm');
+}
+
 function createImageContainer(src){
 
 const c=document.createElement('div')
 c.className='image-container'
 
-const img=document.createElement('img')
-img.src=src
+const isVideo = isVideoFile(src);
+const media = isVideo 
+    ? document.createElement('video')
+    : document.createElement('img');
+media.src=src;
+if(isVideo) {
+    media.controls = false;
+    media.loop = true;
+    media.muted = true;
+    media.autoplay = true;
+    media.style.width = '100%';
+    media.style.height = '200px';
+    media.style.objectFit = 'cover';
+    media.style.cursor = 'pointer';
+    media.style.borderRadius = '6px';
+    media.style.display = 'block';
+}
 
-img.onclick=()=>{
+media.onclick=()=>{
 // Save current scroll position FIRST
 galleryScrollPosition = window.scrollY || document.documentElement.scrollTop
 
@@ -1499,7 +1604,7 @@ setTimeout(() => { ignoreScrollEvents = false }, 200)
 viewer.style.display='flex'
 const header = document.querySelector('header')
 if(header) header.style.display='none'
-full.src=src
+setViewerMedia(src)
 
 // Hide overlay buttons on gallery images when in fullscreen
 const galleryButtons = document.querySelectorAll('.image-container div[style*="position: absolute"]')
@@ -1570,7 +1675,7 @@ buttonRow.appendChild(btn)
 })
 }
 
-c.appendChild(img)
+c.appendChild(media)
 
 /* ℹ info button top-left */
 const infoBtn=document.createElement('button')
@@ -1885,6 +1990,24 @@ btn.textContent = text + ' (' + count + ')';
 })
 }
 
+function setViewerMedia(src) {
+    const isVideo = isVideoFile(src);
+    const img = document.getElementById('full');
+    const video = document.getElementById('fullVideo');
+    
+    if(isVideo) {
+        img.style.display = 'none';
+        img.src = '';
+        video.style.display = 'block';
+        video.src = src;
+    } else {
+        video.style.display = 'none';
+        video.src = '';
+        img.style.display = 'block';
+        img.src = src;
+    }
+}
+
 function startFullscreenViewer(){
 if(currentImages.length===0) return
 showImage(0)
@@ -1895,7 +2018,7 @@ function showImage(index){
 if(index<0) index=currentImages.length-1
 if(index>=currentImages.length) index=0
 currentIndex=index
-full.src=currentImages[currentIndex]
+setViewerMedia(currentImages[currentIndex])
 viewer.style.display='flex'
 const header = document.querySelector('header')
 if(header) header.style.display='none'

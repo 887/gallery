@@ -113,6 +113,7 @@ const server = http.createServer((req, res) => {
                 '.png': 'image/png',
                 '.gif': 'image/gif',
                 '.webp': 'image/webp',
+                '.webm': 'video/webm',
                 '.bmp': 'image/bmp',
                 '.svg': 'image/svg+xml',
                 '.tiff': 'image/tiff',
@@ -172,7 +173,7 @@ const server = http.createServer((req, res) => {
             let images = files.filter(f => {
                 const full = path.join(folder, f);
                 const ext = path.extname(f).toLowerCase();
-                return fs.statSync(full).isFile() && ['.jpg','.jpeg','.png','.gif','.webp','.bmp','.svg','.tiff','.tif','.ico','.jxl','.avif'].includes(ext);
+                return fs.statSync(full).isFile() && ['.jpg','.jpeg','.png','.gif','.webp','.webm','.bmp','.svg','.tiff','.tif','.ico','.jxl','.avif'].includes(ext);
             });
 
             images.sort((a,b)=>{
