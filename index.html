@@ -1837,6 +1837,24 @@ showImage(nextIdx);
 }
 }
 
+function nextImage(){
+const nextIdx = currentIndex + 1;
+if(nextIdx >= currentImages.length) {
+showImage(0);
+} else {
+showImage(nextIdx);
+}
+}
+
+function prevImage(){
+const prevIdx = currentIndex - 1;
+if(prevIdx < 0) {
+showImage(currentImages.length - 1);
+} else {
+showImage(prevIdx);
+}
+}
+
 function loadImages(folder){
 currentFolder = folder === 'root' || folder === 'all' ? 'root' : folder
 updateUrlHash()
