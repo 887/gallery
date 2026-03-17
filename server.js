@@ -85,7 +85,7 @@ function countImages(folder) {
     return fs.readdirSync(folder).filter(f=>{
         const full = path.join(folder, f);
         const ext = path.extname(f).toLowerCase();
-        return fs.statSync(full).isFile() && ['.jpg','.jpeg','.png','.gif','.webp','.bmp','.svg','.tiff','.tif','.ico','.jxl','.avif'].includes(ext);
+        return fs.statSync(full).isFile() && ['.jpg','.jpeg','.png','.gif','.webp','.webm','.bmp','.svg','.tiff','.tif','.ico','.jxl','.avif'].includes(ext);
     }).length;
 }
 
